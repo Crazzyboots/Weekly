@@ -1,0 +1,29 @@
+## Interface: 120000
+## Title: Weekly
+## Notes: Account-wide weekly chore tracker for Midnight
+## Author: Weekly
+## Version: 1.0.0
+## SavedVariables: WeeklyDB
+## IconTexture: Interface\AddOns\Weekly\icon-large
+
+Constants.lua
+Utils.lua
+Database.lua
+Core.lua
+
+Modules\CharacterInfo.lua
+Modules\MythicPlus.lua
+Modules\Raids.lua
+Modules\WeeklyQuests.lua
+Modules\PinnacleCaches.lua
+Modules\Prey.lua
+Modules\Delves.lua
+
+UI\CellRenderers.lua
+UI\Tooltip.lua
+UI\RowCategory.lua
+UI\ScrollContainer.lua
+UI\Grid.lua
+UI\SettingsPanel.lua
+UI\MainWindow.lua
+UI\MinimapButton.lua
