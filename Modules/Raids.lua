@@ -8,7 +8,6 @@ local mod = {
     label = "Raids",
     order = 30,
     events = {
-        "UPDATE_INSTANCE_INFO",
         "ENCOUNTER_END",
         "BOSS_KILL",
     },

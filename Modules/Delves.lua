@@ -9,7 +9,6 @@ local mod = {
     order = 70,
     events = {
         "QUEST_TURNED_IN",
-        "CURRENCY_DISPLAY_UPDATE",
     },
 }
 

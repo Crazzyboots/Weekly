@@ -91,10 +91,11 @@ local collectTimer = nil
 
 local function ThrottledCollect()
     if collectTimer then return end
-    collectTimer = C_Timer.After(2, function()
+    -- Only bother if the window is actually visible
+    if not (Weekly.mainWindow and Weekly.mainWindow:IsShown()) then return end
+    collectTimer = C_Timer.After(5, function()
         collectTimer = nil
         Weekly.CollectAll()
-        -- Only refresh grid if window is visible and settings panel is not shown
         if Weekly.mainWindow and Weekly.mainWindow:IsShown() then
             local SP = Weekly.SettingsPanel
             if not (SP and SP.IsShown and SP.IsShown()) then
@@ -240,6 +241,8 @@ function Weekly.ToggleWindow()
         if Weekly.mainWindow:IsShown() then
             Weekly.mainWindow:Hide()
         else
+            -- Request fresh raid lockout info before collecting
+            if RequestRaidInfo then RequestRaidInfo() end
             Weekly.CollectAll()
             Weekly.RefreshGrid()
             Weekly.mainWindow:Show()

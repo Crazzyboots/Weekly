@@ -7,7 +7,7 @@ local mod = {
     key = "characterInfo",
     label = "Character",
     order = 10,
-    events = { "PLAYER_EQUIPMENT_CHANGED" },
+    events = {},  -- ilvl is collected on window open, not on every gear swap
 }
 
 function mod:Collect(charData)

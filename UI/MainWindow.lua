@@ -92,6 +92,8 @@ local function CreateMainWindow()
     local gearBtn = CreateFrame("Button", nil, frame)
     gearBtn:SetSize(22, 22)
     gearBtn:SetPoint("RIGHT", closeBtn, "LEFT", -2, 0)
+    gearBtn:SetFrameLevel(titleBar:GetFrameLevel() + 5)
+    gearBtn:RegisterForClicks("LeftButtonUp")
 
     local gearIcon = gearBtn:CreateTexture(nil, "ARTWORK")
     gearIcon:SetAllPoints()

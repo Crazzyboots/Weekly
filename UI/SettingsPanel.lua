@@ -9,9 +9,10 @@ local G = Weekly.Grid
 
 local panelState = {
     frame = nil,
+    content = nil,
     initialized = false,
     built = false,
-    widgets = {},    -- holds references for in-place updates
+    scrollOffset = 0,
 }
 
 ---------------------------------------------------------------------------
@@ -32,6 +33,11 @@ StaticPopupDialogs["WEEKLY_DELETE_CHARACTER"] = {
     hideOnEscape = true,
     preferredIndex = 3,
 }
+
+---------------------------------------------------------------------------
+-- Track all regions/children so we can hide them on rebuild
+---------------------------------------------------------------------------
+local managedRegions = {}
 
 ---------------------------------------------------------------------------
 -- Helpers
@@ -72,19 +78,51 @@ local function CreateSeparator(parent, y)
     return sep
 end
 
----------------------------------------------------------------------------
--- Track all regions/children so we can hide them on rebuild
----------------------------------------------------------------------------
-local managedRegions = {}  -- FontStrings and Textures we created
+local function CreateRadioButton(parent, x, y, label, selected, onClick)
+    local btn = CreateFrame("Button", nil, parent)
+    btn:SetSize(200, 20)
+    btn:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -y)
+
+    local indicator = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    indicator:SetPoint("LEFT", btn, "LEFT", 0, 0)
+    if selected then
+        indicator:SetText("|cffcc3333(x)|r")
+    else
+        indicator:SetText("( )")
+    end
+    btn.indicator = indicator
+
+    local text = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    text:SetPoint("LEFT", indicator, "RIGHT", 6, 0)
+    text:SetText(label)
+    btn.label = text
+
+    btn:SetScript("OnClick", function()
+        onClick()
+    end)
+
+    return btn
+end
+
+local function CreateArrowButton(parent, x, y, direction, onClick)
+    local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    btn:SetSize(22, 18)
+    btn:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -y)
+    btn:SetText(direction == "up" and "^" or "v")
+
+    btn:SetScript("OnClick", function()
+        onClick()
+    end)
+
+    return btn
+end
 
 local function RecycleAll(content)
-    -- Hide child frames
     local children = { content:GetChildren() }
     for _, child in ipairs(children) do
         child:Hide()
         child:ClearAllPoints()
     end
-    -- Hide FontStrings and Textures we created
     for _, region in ipairs(managedRegions) do
         region:Hide()
     end
@@ -93,9 +131,6 @@ end
 
 ---------------------------------------------------------------------------
 -- Build the settings content
--- Called once on first show, then again only when character list changes
--- (delete). Checkbox state is wired to live callbacks, so no refresh needed
--- for toggle changes.
 ---------------------------------------------------------------------------
 local function BuildContent(content)
     RecycleAll(content)
@@ -112,7 +147,7 @@ local function BuildContent(content)
     for _, mod in ipairs(Weekly.modules) do
         if mod.key ~= "characterInfo" then
             local enabled = not DB.IsModuleDisabled(mod.key)
-            local modKey = mod.key  -- capture for closure
+            local modKey = mod.key
             CreateCheckbox(content, 20, y, mod.label or mod.key, enabled, function(checked)
                 DB.SetModuleDisabled(modKey, not checked)
             end)
@@ -134,24 +169,20 @@ local function BuildContent(content)
     for _, charKey in ipairs(charKeys) do
         local charData = DB.GetCharacter(charKey)
         if charData then
-            -- Class-colored name
             local classColor = C.ClassColors[charData.class] or C.Colors.WHITE
             local displayName = charData.name or "Unknown"
             if charData.realm and charData.realm ~= "" then
                 displayName = displayName .. "-" .. charData.realm
             end
 
-            -- Show/hide checkbox
             local visible = not DB.IsCharacterHidden(charKey)
-            local capturedKey = charKey  -- capture for closure
+            local capturedKey = charKey
             local cb = CreateCheckbox(content, 20, y, "", visible, function(checked)
                 DB.SetCharacterHidden(capturedKey, not checked)
             end)
 
-            -- Colored name label
             cb.label:SetText(U.ColorText(displayName, classColor))
 
-            -- Delete button
             local delBtn = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
             delBtn:SetSize(60, 22)
             delBtn:SetPoint("TOPLEFT", content, "TOPLEFT", 280, -y - 2)
@@ -181,12 +212,89 @@ local function BuildContent(content)
     y = y + 16
 
     -------------------------------------------------------------------
-    -- Section C — Display Options
+    -- Section C — Sort Characters By
+    -------------------------------------------------------------------
+    CreateSectionTitle(content, y, "Sort Characters By")
+    y = y + 28
+
+    local sortOptions = {
+        { key = "lastSeen", label = "Last Seen" },
+        { key = "ilvl",     label = "Item Level" },
+        { key = "name",     label = "Name (A-Z)" },
+        { key = "custom",   label = "Custom Order" },
+    }
+
+    local currentSort = settings.sortBy or "lastSeen"
+
+    for _, opt in ipairs(sortOptions) do
+        local optKey = opt.key
+        CreateRadioButton(content, 20, y, opt.label, currentSort == optKey, function()
+            settings.sortBy = optKey
+            SP.Rebuild()
+            if Weekly.RefreshGrid then
+                Weekly.RefreshGrid()
+            end
+        end)
+        y = y + 24
+    end
+
+    -- If custom sort is active, show Up/Down arrows next to character names
+    if currentSort == "custom" then
+        y = y + 4
+        if not settings.customCharOrder or #settings.customCharOrder == 0 then
+            settings.sortBy = "lastSeen"
+            settings.customCharOrder = DB.GetSortedCharacterKeys()
+            settings.sortBy = "custom"
+        end
+
+        local order = settings.customCharOrder
+        for i, charKey in ipairs(order) do
+            local charData = DB.GetCharacter(charKey)
+            if charData then
+                local classColor = C.ClassColors[charData.class] or C.Colors.WHITE
+                local displayName = charData.name or "Unknown"
+                if charData.realm and charData.realm ~= "" then
+                    displayName = displayName .. "-" .. charData.realm
+                end
+
+                local nameFs = content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                nameFs:SetPoint("TOPLEFT", content, "TOPLEFT", 70, -y)
+                nameFs:SetText(U.ColorText(displayName, classColor))
+                managedRegions[#managedRegions + 1] = nameFs
+
+                if i > 1 then
+                    local idx = i
+                    CreateArrowButton(content, 24, y, "up", function()
+                        order[idx], order[idx - 1] = order[idx - 1], order[idx]
+                        SP.Rebuild()
+                        if Weekly.RefreshGrid then Weekly.RefreshGrid() end
+                    end)
+                end
+
+                if i < #order then
+                    local idx = i
+                    CreateArrowButton(content, 46, y, "down", function()
+                        order[idx], order[idx + 1] = order[idx + 1], order[idx]
+                        SP.Rebuild()
+                        if Weekly.RefreshGrid then Weekly.RefreshGrid() end
+                    end)
+                end
+
+                y = y + 24
+            end
+        end
+    end
+
+    y = y + 8
+    CreateSeparator(content, y)
+    y = y + 16
+
+    -------------------------------------------------------------------
+    -- Section D — Display Options
     -------------------------------------------------------------------
     CreateSectionTitle(content, y, "Display")
     y = y + 28
 
-    -- Minimap button toggle
     local mmShow = settings.minimapButton.show
     CreateCheckbox(content, 20, y, "Show minimap button", mmShow, function(checked)
         settings.minimapButton.show = checked
@@ -200,13 +308,11 @@ local function BuildContent(content)
     end)
     y = y + 28
 
-    -- Show offline characters toggle
     CreateCheckbox(content, 20, y, "Show offline characters", settings.showOfflineCharacters, function(checked)
         settings.showOfflineCharacters = checked
     end)
     y = y + 36
 
-    -- Column width slider
     local sliderLabel = content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     sliderLabel:SetPoint("TOPLEFT", content, "TOPLEFT", 24, -y)
     sliderLabel:SetText("Column width: " .. (settings.columnWidth or C.UI.CHAR_COLUMN_WIDTH))
@@ -235,15 +341,14 @@ local function BuildContent(content)
     thumb:SetTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
     slider:SetThumbTexture(thumb)
 
-    local minLabel = slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    minLabel:SetPoint("TOPLEFT", slider, "BOTTOMLEFT", 0, -2)
-    minLabel:SetText("80")
+    local minText = slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    minText:SetPoint("TOPLEFT", slider, "BOTTOMLEFT", 0, -2)
+    minText:SetText("80")
 
-    local maxLabel = slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    maxLabel:SetPoint("TOPRIGHT", slider, "BOTTOMRIGHT", 0, -2)
-    maxLabel:SetText("200")
+    local maxText = slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    maxText:SetPoint("TOPRIGHT", slider, "BOTTOMRIGHT", 0, -2)
+    maxText:SetText("200")
 
-    -- Set OnValueChanged BEFORE SetValue so we don't fire with nil sliderLabel
     slider:SetScript("OnValueChanged", function(self, value)
         value = math.floor(value / 10 + 0.5) * 10
         settings.columnWidth = value
@@ -254,41 +359,49 @@ local function BuildContent(content)
 
     y = y + 40
 
-    -- Set total content height
+    -- Set total content height for scrolling
     content:SetHeight(y + 20)
 
     panelState.built = true
 end
 
 ---------------------------------------------------------------------------
--- Init
+-- Init — simple clip frame with manual mouse wheel scroll (NO scroll
+-- frame template, which is broken in WoW 11.x)
 ---------------------------------------------------------------------------
 function SP.Init(parent)
     if panelState.initialized then return end
 
     local titleHeight = C.UI.TITLE_HEIGHT
 
-    -- Scroll frame for settings
-    local scrollFrame = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", parent, "TOPLEFT", 4, -(titleHeight + 6))
-    scrollFrame:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -26, 4)
+    -- Outer clip frame (masks overflow)
+    local clipFrame = CreateFrame("Frame", nil, parent)
+    clipFrame:SetPoint("TOPLEFT", parent, "TOPLEFT", 4, -(titleHeight + 6))
+    clipFrame:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -4, 4)
+    clipFrame:SetClipsChildren(true)
 
-    local content = CreateFrame("Frame", nil, scrollFrame)
-    -- Use a reasonable default width; OnSizeChanged will correct it once laid out
-    content:SetSize(parent:GetWidth() - 30, 1)
-    scrollFrame:SetScrollChild(content)
+    -- Inner content frame (taller than clip, scrolled by mouse wheel)
+    local content = CreateFrame("Frame", nil, clipFrame)
+    content:SetPoint("TOPLEFT", clipFrame, "TOPLEFT", 0, 0)
+    content:SetWidth(parent:GetWidth() - 8)
+    content:SetHeight(1)
 
-    -- Update content width when scroll frame gets laid out
-    scrollFrame:SetScript("OnSizeChanged", function(self, w, h)
-        content:SetWidth(w)
+    -- Mouse wheel scrolling
+    panelState.scrollOffset = 0
+    clipFrame:EnableMouseWheel(true)
+    clipFrame:SetScript("OnMouseWheel", function(self, delta)
+        local maxScroll = math.max(0, content:GetHeight() - clipFrame:GetHeight())
+        panelState.scrollOffset = panelState.scrollOffset - (delta * 30)
+        panelState.scrollOffset = math.max(0, math.min(panelState.scrollOffset, maxScroll))
+        content:SetPoint("TOPLEFT", clipFrame, "TOPLEFT", 0, panelState.scrollOffset)
     end)
 
-    panelState.frame = scrollFrame
+    panelState.frame = clipFrame
     panelState.content = content
     panelState.parent = parent
     panelState.initialized = true
 
-    scrollFrame:Hide()
+    clipFrame:Hide()
 end
 
 ---------------------------------------------------------------------------
@@ -296,17 +409,21 @@ end
 ---------------------------------------------------------------------------
 function SP.Show()
     if not panelState.initialized then return end
-    G.Hide()
-    -- Build content on first show, or if flagged for rebuild
+    -- Build content BEFORE hiding grid (so if build fails, grid stays)
     if not panelState.built then
-        BuildContent(panelState.content)
+        local ok, err = pcall(BuildContent, panelState.content)
+        if not ok then
+            U.Print("|cffff0000Settings error:|r " .. tostring(err))
+            return
+        end
     end
+    G.Hide()
     panelState.frame:Show()
 end
 
 function SP.Hide()
     if not panelState.initialized then return end
-    if not panelState.frame:IsShown() then return end  -- guard against double-call
+    if not panelState.frame:IsShown() then return end
     panelState.frame:Hide()
     G.Show()
 end
@@ -315,11 +432,16 @@ function SP.IsShown()
     return panelState.initialized and panelState.frame:IsShown()
 end
 
--- Full rebuild (used after character delete)
 function SP.Rebuild()
     panelState.built = false
+    panelState.scrollOffset = 0
     if SP.IsShown() then
-        BuildContent(panelState.content)
+        local ok, err = pcall(BuildContent, panelState.content)
+        if not ok then
+            U.Print("|cffff0000Settings rebuild error:|r " .. tostring(err))
+        else
+            panelState.content:SetPoint("TOPLEFT", panelState.frame, "TOPLEFT", 0, 0)
+        end
     end
 end
 

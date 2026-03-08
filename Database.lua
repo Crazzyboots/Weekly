@@ -24,6 +24,8 @@ local DEFAULT_DB = {
         showOfflineCharacters = true,
         disabledModules = {},
         hiddenCharacters = {},
+        sortBy = "lastSeen",       -- "lastSeen", "ilvl", "name", "custom"
+        customCharOrder = {},      -- ordered list of charKeys for custom sort
     },
 }
 
@@ -137,12 +139,40 @@ function DB.GetSortedCharacterKeys()
     for key in pairs(Weekly.db.characters) do
         keys[#keys + 1] = key
     end
-    -- Sort by lastSeen descending (most recently played first)
-    table.sort(keys, function(a, b)
-        local ca = Weekly.db.characters[a]
-        local cb = Weekly.db.characters[b]
-        return (ca.lastSeen or 0) > (cb.lastSeen or 0)
-    end)
+
+    local sortBy = DB.GetSettings().sortBy or "lastSeen"
+
+    if sortBy == "custom" then
+        -- Follow saved order; any keys not in the list go to the end
+        local order = DB.GetSettings().customCharOrder or {}
+        local rank = {}
+        for i, k in ipairs(order) do
+            rank[k] = i
+        end
+        local fallback = #order + 1
+        table.sort(keys, function(a, b)
+            return (rank[a] or fallback) < (rank[b] or fallback)
+        end)
+    elseif sortBy == "ilvl" then
+        table.sort(keys, function(a, b)
+            local ca = Weekly.db.characters[a]
+            local cb = Weekly.db.characters[b]
+            return (ca.avgItemLevelEquipped or 0) > (cb.avgItemLevelEquipped or 0)
+        end)
+    elseif sortBy == "name" then
+        table.sort(keys, function(a, b)
+            local ca = Weekly.db.characters[a]
+            local cb = Weekly.db.characters[b]
+            return (ca.name or "") < (cb.name or "")
+        end)
+    else -- "lastSeen" (default)
+        table.sort(keys, function(a, b)
+            local ca = Weekly.db.characters[a]
+            local cb = Weekly.db.characters[b]
+            return (ca.lastSeen or 0) > (cb.lastSeen or 0)
+        end)
+    end
+
     return keys
 end
 
@@ -316,6 +346,18 @@ function DB.Migrate()
         end
     end
 
+    if version < 4 then
+        WeeklyDB.schemaVersion = 4
+        if WeeklyDB.settings then
+            if not WeeklyDB.settings.sortBy then
+                WeeklyDB.settings.sortBy = "lastSeen"
+            end
+            if not WeeklyDB.settings.customCharOrder then
+                WeeklyDB.settings.customCharOrder = {}
+            end
+        end
+    end
+
     -- Future migrations go here:
-    -- if version < 4 then ... end
+    -- if version < 5 then ... end
 end
