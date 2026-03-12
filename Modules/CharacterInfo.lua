@@ -25,8 +25,8 @@ function mod:Collect(charData)
 
     if GetAverageItemLevel then
         local avg, avgEquipped = GetAverageItemLevel()
-        charData.avgItemLevel = avg and math.floor(avg) or charData.avgItemLevel
-        charData.avgItemLevelEquipped = avgEquipped and math.floor(avgEquipped) or charData.avgItemLevelEquipped
+        charData.avgItemLevel = avg or charData.avgItemLevel
+        charData.avgItemLevelEquipped = avgEquipped or charData.avgItemLevelEquipped
     end
 end
 

@@ -282,6 +282,19 @@ function DB.ResetCharacterIfNeeded(charKey, charData)
     end
 end
 
+-- Reset ALL characters whose lastSeen is before the current reset
+function DB.ResetAllCharactersIfNeeded()
+    if not Weekly.db then return end
+    local lastReset = Weekly.db.lastResetTimestamp or 0
+    if lastReset == 0 then return end
+
+    for charKey, charData in pairs(Weekly.db.characters) do
+        if (charData.lastSeen or 0) < lastReset then
+            DB.ResetCharacterIfNeeded(charKey, charData)
+        end
+    end
+end
+
 -- Manual reset (slash command): only resets current character
 function DB.PerformReset()
     local charKey = U.GetCharacterKey()

@@ -62,6 +62,17 @@ function U.FormatNA()
     return U.ColorText("N/A", C.Colors.UNAVAILABLE)
 end
 
+function U.FormatNumber(n)
+    n = tostring(n)
+    local formatted = n
+    while true do
+        local k
+        formatted, k = formatted:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
+        if k == 0 then break end
+    end
+    return formatted
+end
+
 function U.Abbreviate(text, maxLen)
     maxLen = maxLen or 12
     if #text <= maxLen then return text end

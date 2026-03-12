@@ -11,6 +11,7 @@ local SC = Weekly.ScrollContainer
 
 local gridState = {
     labelContainer = nil,
+    labelContent = nil,
     scrollContainer = nil,
     initialized = false,
 }
@@ -26,19 +27,43 @@ function G.Init(parent)
 
     local parentWidth = parent:GetWidth()
     local parentHeight = parent:GetHeight()
-    local dataWidth = parentWidth - labelWidth
-    local dataHeight = parentHeight - titleHeight - headerHeight
+    local sbSize = UI.SCROLLBAR_SIZE
+    local contentHeight = parentHeight - titleHeight - sbSize  -- room for h-scrollbar
+    local dataWidth = parentWidth - labelWidth - sbSize        -- room for v-scrollbar
 
-    -- Label column (fixed left side) — includes both header area and row area
+    -- Label column (clip frame — masks overflow)
     local labelFrame = CreateFrame("Frame", nil, parent)
     labelFrame:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -titleHeight)
-    labelFrame:SetSize(labelWidth, parentHeight - titleHeight)
+    labelFrame:SetSize(labelWidth, contentHeight)
     labelFrame:SetClipsChildren(true)
 
-    -- Scroll container for character columns (header + data together)
-    local scrollContainer = SC.Create(parent, labelWidth, titleHeight, dataWidth, parentHeight - titleHeight)
+    -- Inner scrollable content for labels
+    local labelContent = CreateFrame("Frame", nil, labelFrame)
+    labelContent:SetPoint("TOPLEFT", labelFrame, "TOPLEFT", 0, 0)
+    labelContent:SetSize(labelWidth, contentHeight)
 
+    -- Scroll container for character columns (header + data together)
+    local scrollContainer = SC.Create(parent, labelWidth, titleHeight, dataWidth, contentHeight)
+
+    -- Link label frame so vertical scroll stays in sync
+    SC.LinkLabelFrame(scrollContainer, labelFrame, labelContent)
+
+    -- Mouse wheel on labels → vertical scroll
+    labelFrame:EnableMouseWheel(true)
+    labelFrame:SetScript("OnMouseWheel", function(self, delta)
+        SC.ScrollVertical(scrollContainer, -delta * C.UI.SCROLL_STEP)
+    end)
+
+    -- Vertical separator between label column and data area
+    local labelSep = parent:CreateTexture(nil, "ARTWORK")
+    labelSep:SetWidth(1)
+    labelSep:SetPoint("TOPLEFT", parent, "TOPLEFT", labelWidth, -titleHeight)
+    labelSep:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", labelWidth, 0)
+    labelSep:SetColorTexture(C.Colors.SEPARATOR.r, C.Colors.SEPARATOR.g, C.Colors.SEPARATOR.b, C.Colors.SEPARATOR.a)
+
+    gridState.labelSeparator = labelSep
     gridState.labelContainer = labelFrame
+    gridState.labelContent = labelContent
     gridState.scrollContainer = scrollContainer
     gridState.parent = parent
     gridState.initialized = true
@@ -46,6 +71,7 @@ end
 
 function G.Hide()
     if gridState.labelContainer then gridState.labelContainer:Hide() end
+    if gridState.labelSeparator then gridState.labelSeparator:Hide() end
     if gridState.scrollContainer and gridState.scrollContainer.clipFrame then
         gridState.scrollContainer.clipFrame:Hide()
     end
@@ -53,6 +79,7 @@ end
 
 function G.Show()
     if gridState.labelContainer then gridState.labelContainer:Show() end
+    if gridState.labelSeparator then gridState.labelSeparator:Show() end
     if gridState.scrollContainer and gridState.scrollContainer.clipFrame then
         gridState.scrollContainer.clipFrame:Show()
     end
@@ -80,9 +107,25 @@ function Weekly.RefreshGrid()
     local charKeys = {}
     for _, key in ipairs(allKeys) do
         if not DB.IsCharacterHidden(key) then
-            charKeys[#charKeys + 1] = key
+            local charData = DB.GetCharacter(key)
+            if charData and (charData.level or 0) >= 90 then
+                charKeys[#charKeys + 1] = key
+            end
         end
     end
+
+    -- Current character always goes first
+    local currentKey = U.GetCharacterKey()
+    if currentKey then
+        for i, key in ipairs(charKeys) do
+            if key == currentKey then
+                table.remove(charKeys, i)
+                table.insert(charKeys, 1, key)
+                break
+            end
+        end
+    end
+
     local numChars = #charKeys
 
     if numChars == 0 then
@@ -93,7 +136,7 @@ function Weekly.RefreshGrid()
         else
             msg = "|cff888888No character data yet.\nLog in on your characters!|r"
         end
-        CR.RenderTextCell(gridState.labelContainer, 20, headerHeight + 20, labelWidth - 40, 40, msg)
+        CR.RenderTextCell(gridState.labelContent, 20, headerHeight + 20, labelWidth - 40, 40, msg)
         return
     end
 
@@ -102,7 +145,7 @@ function Weekly.RefreshGrid()
     SC.SetContentWidth(gridState.scrollContainer, contentWidth)
 
     local content = gridState.scrollContainer.content
-    local labelFrame = gridState.labelContainer
+    local labelContent = gridState.labelContent
 
     -----------------------------------------------------------------
     -- Render character header row (in scroll area)
@@ -125,7 +168,7 @@ function Weekly.RefreshGrid()
         if row.isHeader then
             -- Section header — render across full width in label column
             local _, collapsed = RC.RenderHeader(
-                labelFrame, 0, currentY, labelWidth, sectionHeight,
+                labelContent, 0, currentY, labelWidth, sectionHeight,
                 row.section, row.label
             )
 
@@ -143,10 +186,10 @@ function Weekly.RefreshGrid()
 
         elseif RC.IsRowVisible(row) then
             -- Row background stripe in label area
-            CR.RenderRowBackground(labelFrame, 0, currentY, labelWidth, rowHeight, rowIndex)
+            CR.RenderRowBackground(labelContent, 0, currentY, labelWidth, rowHeight, rowIndex)
 
             -- Row label
-            CR.RenderLabelCell(labelFrame, 0, currentY, labelWidth, rowHeight, row.label, false)
+            CR.RenderLabelCell(labelContent, 0, currentY, labelWidth, rowHeight, row.label, false)
 
             -- Data cells for each character
             for ci, charKey in ipairs(charKeys) do
@@ -177,8 +220,47 @@ function Weekly.RefreshGrid()
         end
     end
 
-    -- Update content height for proper scrolling
+    -- Update content dimensions
     local totalHeight = currentY
-    gridState.scrollContainer.content:SetHeight(totalHeight)
-    gridState.labelContainer:SetHeight(totalHeight)
+    gridState.labelContent:SetHeight(totalHeight)
+    gridState.labelContent:SetWidth(labelWidth)
+
+    -- Auto-resize window to fit all content (no scrolling needed)
+    local parent = gridState.parent
+    local sbSize = UI.SCROLLBAR_SIZE
+    local titleHeight = UI.TITLE_HEIGHT
+
+    -- Width: label column + all character columns + vertical scrollbar + border insets
+    local desiredWidth = labelWidth + contentWidth + sbSize + 8
+    local maxWidth = (UIParent:GetWidth()) * 0.95
+    local newWidth = math.max(UI.MIN_WINDOW_WIDTH, math.min(desiredWidth, maxWidth))
+
+    -- Height: all rows + title + horizontal scrollbar + border insets
+    local desiredHeight = totalHeight + titleHeight + sbSize + 8
+    local maxHeight = (UIParent:GetHeight()) * 0.9
+    local newHeight = math.max(UI.MIN_WINDOW_HEIGHT, math.min(desiredHeight, maxHeight))
+
+    parent:SetSize(newWidth, newHeight)
+
+    -- Resize internal containers to match new dimensions
+    local newContentHeight = newHeight - titleHeight - sbSize
+    local dataWidth = newWidth - labelWidth - sbSize
+    gridState.labelContainer:SetHeight(newContentHeight)
+    SC.Resize(gridState.scrollContainer, dataWidth, newContentHeight)
+
+    SC.SetContentHeight(gridState.scrollContainer, totalHeight)
+
+    -----------------------------------------------------------------
+    -- Column separators (vertical lines between character columns)
+    -----------------------------------------------------------------
+    for ci = 2, numChars do
+        local sepX = (ci - 1) * colWidth
+        CR.RenderColumnSeparator(content, sepX, 0, totalHeight)
+    end
+
+    -----------------------------------------------------------------
+    -- Header bottom border (horizontal line below character headers)
+    -----------------------------------------------------------------
+    CR.RenderHeaderBottomBorder(content, 0, headerHeight, math.max(contentWidth, 1))
+    CR.RenderHeaderBottomBorder(labelContent, 0, headerHeight, labelWidth)
 end

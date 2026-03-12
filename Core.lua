@@ -91,11 +91,10 @@ local collectTimer = nil
 
 local function ThrottledCollect()
     if collectTimer then return end
-    -- Only bother if the window is actually visible
-    if not (Weekly.mainWindow and Weekly.mainWindow:IsShown()) then return end
-    collectTimer = C_Timer.After(5, function()
+    collectTimer = C_Timer.After(1, function()
         collectTimer = nil
         Weekly.CollectAll()
+        -- Only refresh the grid if the window is visible
         if Weekly.mainWindow and Weekly.mainWindow:IsShown() then
             local SP = Weekly.SettingsPanel
             if not (SP and SP.IsShown and SP.IsShown()) then
@@ -116,6 +115,7 @@ local function OnEvent(self, event, ...)
     elseif event == "PLAYER_LOGIN" then
         DB.DetectRegion()
         DB.CheckWeeklyReset()
+        DB.ResetAllCharactersIfNeeded()
 
         Weekly.CollectAll()
 
@@ -123,6 +123,7 @@ local function OnEvent(self, event, ...)
         -- Check every 60 seconds (handles reset while playing)
         C_Timer.NewTicker(60, function()
             if DB.CheckWeeklyReset() then
+                DB.ResetAllCharactersIfNeeded()
                 Weekly.CollectAll()
                 if Weekly.mainWindow and Weekly.mainWindow:IsShown() then
                     Weekly.RefreshGrid()
@@ -243,6 +244,7 @@ function Weekly.ToggleWindow()
         else
             -- Request fresh raid lockout info before collecting
             if RequestRaidInfo then RequestRaidInfo() end
+            DB.ResetAllCharactersIfNeeded()
             Weekly.CollectAll()
             Weekly.RefreshGrid()
             Weekly.mainWindow:Show()

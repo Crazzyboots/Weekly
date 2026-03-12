@@ -11,7 +11,7 @@ local CR = Weekly.CellRenderers
 ---------------------------------------------------------------------------
 function RC.RenderHeader(parent, x, y, width, height, sectionKey, label)
     local collapsed = DB.IsSectionCollapsed(sectionKey)
-    local arrow = collapsed and "|cffcccccc\226\150\186|r " or "|cffcccccc\226\150\190|r "  -- ► / ▾
+    local arrow = collapsed and "|cffaaaaaa\226\150\186|r " or "|cffaaaaaa\226\150\190|r "  -- ► / ▾
 
     local cell = CR.AcquireCell(parent)
     cell:SetSize(width, height)
@@ -22,7 +22,7 @@ function RC.RenderHeader(parent, x, y, width, height, sectionKey, label)
     cell.text:SetJustifyH("LEFT")
     cell.text:SetWidth(width - 12)
     cell.text:SetFontObject(GameFontNormal)
-    cell.text:SetText(arrow .. "|cffdddddd" .. label .. "|r")
+    cell.text:SetText(arrow .. "|cffd94040" .. label .. "|r")
 
     cell.bg:SetColorTexture(
         C.Colors.HEADER_BG.r,
@@ -49,7 +49,7 @@ function RC.RenderHeader(parent, x, y, width, height, sectionKey, label)
 
     -- Highlight on hover
     cell:SetScript("OnEnter", function(self)
-        self.bg:SetColorTexture(0.15, 0.08, 0.08, 1.0)
+        self.bg:SetColorTexture(0.12, 0.07, 0.07, 1.0)
     end)
     cell:SetScript("OnLeave", function(self)
         self.bg:SetColorTexture(

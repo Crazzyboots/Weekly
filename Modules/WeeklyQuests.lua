@@ -21,7 +21,6 @@ function mod:Collect(charData)
         local completed = false
         local matchedID = nil
 
-        -- Check all variant IDs — any true means completed
         for _, qid in ipairs(quest.questIDs) do
             if qid > 0 and C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then
                 if C_QuestLog.IsQuestFlaggedCompleted(qid) then

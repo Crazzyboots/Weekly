@@ -46,11 +46,68 @@ local function CreateMainWindow()
     -----------------------------------------------------------------
     -- Title bar
     -----------------------------------------------------------------
+    local titleHeight = C.UI.TITLE_HEIGHT
     local titleBar = CreateFrame("Frame", nil, frame)
-    titleBar:SetHeight(C.UI.TITLE_HEIGHT)
+    titleBar:SetHeight(titleHeight)
     titleBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, -4)
     titleBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -4, -4)
     titleBar:EnableMouse(true)
+    titleBar:SetFrameLevel(frame:GetFrameLevel() + 2)
+
+    -- Gradient header background (dark red at top → body dark at bottom)
+    local titleBg = titleBar:CreateTexture(nil, "BACKGROUND")
+    titleBg:SetAllPoints()
+    titleBg:SetColorTexture(1, 1, 1, 1)
+    titleBg:SetGradient("VERTICAL",
+        CreateColor(0.06, 0.04, 0.06, 1.0),   -- bottom: blends into body
+        CreateColor(0.14, 0.05, 0.05, 1.0)     -- top: warm dark red
+    )
+
+    -- Top accent strip (bright red, 2px)
+    local topAccent = titleBar:CreateTexture(nil, "ARTWORK")
+    topAccent:SetHeight(2)
+    topAccent:SetPoint("TOPLEFT", titleBar, "TOPLEFT", 0, 0)
+    topAccent:SetPoint("TOPRIGHT", titleBar, "TOPRIGHT", 0, 0)
+    topAccent:SetColorTexture(0.75, 0.15, 0.15, 1.0)
+
+    -- Left decorative line (flanking the title)
+    local leftLine = titleBar:CreateTexture(nil, "ARTWORK")
+    leftLine:SetHeight(1)
+    leftLine:SetPoint("LEFT", titleBar, "LEFT", 12, 0)
+    leftLine:SetWidth(70)
+    leftLine:SetColorTexture(1, 1, 1, 1)
+    leftLine:SetGradient("HORIZONTAL",
+        CreateColor(0.75, 0.15, 0.15, 0.0),    -- fade from transparent
+        CreateColor(0.75, 0.15, 0.15, 0.6)      -- to red
+    )
+
+    -- Right decorative line (flanking the title)
+    local rightLine = titleBar:CreateTexture(nil, "ARTWORK")
+    rightLine:SetHeight(1)
+    rightLine:SetPoint("RIGHT", titleBar, "RIGHT", -50, 0)
+    rightLine:SetWidth(70)
+    rightLine:SetColorTexture(1, 1, 1, 1)
+    rightLine:SetGradient("HORIZONTAL",
+        CreateColor(0.75, 0.15, 0.15, 0.6),     -- from red
+        CreateColor(0.75, 0.15, 0.15, 0.0)       -- fade to transparent
+    )
+
+    -- Title shadow (offset behind the main text for depth)
+    local titleShadow = titleBar:CreateFontString(nil, "ARTWORK", "GameFontNormalHuge")
+    titleShadow:SetPoint("CENTER", titleBar, "CENTER", 1, -1)
+    titleShadow:SetText("Weekly")
+    titleShadow:SetTextColor(0.0, 0.0, 0.0, 0.6)
+
+    -- Title text (centered, bright white)
+    local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+    titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
+    titleText:SetText("Weekly")
+    titleText:SetTextColor(1.0, 0.95, 0.9, 1.0)
+
+    -- Version badge (subtle, styled)
+    local versionText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    versionText:SetPoint("LEFT", titleText, "RIGHT", 10, 0)
+    versionText:SetText("|cff8b3030v" .. C.ADDON_VERSION .. "|r")
 
     -- Dragging via title bar
     titleBar:RegisterForDrag("LeftButton")
@@ -59,7 +116,6 @@ local function CreateMainWindow()
     end)
     titleBar:SetScript("OnDragStop", function()
         frame:StopMovingOrSizing()
-        -- Save position
         local point, _, _, x, y = frame:GetPoint()
         local s = DB.GetSettings()
         s.windowPosition.point = point
@@ -67,23 +123,14 @@ local function CreateMainWindow()
         s.windowPosition.y = y
     end)
 
-    -- Title text (centered)
-    local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
-    titleText:SetText(U.ColorText("Weekly", C.Colors.TITLE))
-
-    -- Version text
-    local versionText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    versionText:SetPoint("LEFT", titleText, "RIGHT", 8, 0)
-    versionText:SetText("|cff666666v" .. C.ADDON_VERSION .. "|r")
-
     -----------------------------------------------------------------
-    -- Close button
+    -- Close button (higher level to stay above header)
     -----------------------------------------------------------------
     local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     closeBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -2, -2)
+    closeBtn:SetFrameLevel(titleBar:GetFrameLevel() + 5)
     closeBtn:SetScript("OnClick", function()
-        frame:Hide()  -- OnHide handler takes care of settings panel
+        frame:Hide()
     end)
 
     -----------------------------------------------------------------
@@ -120,13 +167,25 @@ local function CreateMainWindow()
     end)
 
     -----------------------------------------------------------------
-    -- Separator line below title
+    -- Separator below title: red line + soft glow beneath
     -----------------------------------------------------------------
+    local sepY = -(titleHeight + 4)
     local sep = frame:CreateTexture(nil, "ARTWORK")
-    sep:SetHeight(1)
-    sep:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, -(C.UI.TITLE_HEIGHT + 4))
-    sep:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -4, -(C.UI.TITLE_HEIGHT + 4))
-    sep:SetColorTexture(0.7, 0.15, 0.15, 0.8)
+    sep:SetHeight(2)
+    sep:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, sepY)
+    sep:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -4, sepY)
+    sep:SetColorTexture(0.70, 0.15, 0.15, 0.9)
+
+    -- Soft glow beneath separator
+    local sepGlow = frame:CreateTexture(nil, "ARTWORK", nil, -1)
+    sepGlow:SetHeight(8)
+    sepGlow:SetPoint("TOPLEFT", sep, "BOTTOMLEFT", 0, 0)
+    sepGlow:SetPoint("TOPRIGHT", sep, "BOTTOMRIGHT", 0, 0)
+    sepGlow:SetColorTexture(1, 1, 1, 1)
+    sepGlow:SetGradient("VERTICAL",
+        CreateColor(0.55, 0.10, 0.10, 0.0),   -- bottom: transparent
+        CreateColor(0.55, 0.10, 0.10, 0.25)    -- top: subtle red glow
+    )
 
     -----------------------------------------------------------------
     -- Initialize grid inside the frame

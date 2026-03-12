@@ -17,9 +17,10 @@ C.Colors = {
     IN_PROGRESS = { r = 1.0, g = 0.8, b = 0.0 },
     NOT_STARTED = { r = 0.5, g = 0.5, b = 0.5 },
     UNAVAILABLE = { r = 0.35, g = 0.35, b = 0.35 },
-    HEADER_BG   = { r = 0.12, g = 0.06, b = 0.06, a = 1.0 },
-    ROW_BG_1    = { r = 0.06, g = 0.06, b = 0.08, a = 1.0 },
-    ROW_BG_2    = { r = 0.10, g = 0.10, b = 0.12, a = 1.0 },
+    HEADER_BG   = { r = 0.08, g = 0.05, b = 0.05, a = 1.0 },
+    ROW_BG_1    = { r = 0.04, g = 0.04, b = 0.06, a = 1.0 },
+    ROW_BG_2    = { r = 0.09, g = 0.09, b = 0.11, a = 1.0 },
+    SEPARATOR   = { r = 0.20, g = 0.08, b = 0.08, a = 1.0 },
     ACCENT      = { r = 0.75, g = 0.15, b = 0.15, a = 1.0 },
     TITLE       = { r = 1.0, g = 1.0, b = 1.0 },
     WHITE       = { r = 1.0, g = 1.0, b = 1.0 },
@@ -62,9 +63,16 @@ C.ResetSchedule = {
 -- Meta quests: 93889 (Soiree), 93890 (Abundance), 93891 (Haranir), 93892 (Stormarion)
 C.WeeklyQuests = {
     {
-        key = "soiree",
-        label = "Soiree",
-        questIDs = { 89289 },  -- "Favor of the Court" weekly turn-in
+        key = "unityVoid",
+        label = "Spark Quest",
+        questIDs = { 93744, 93767, 93889, 93909, 93910, 93911, 93766 },
+        -- 93744 = Unity Against the Void (choice umbrella)
+        -- 93767 = Midnight: Arcantina
+        -- 93889 = Midnight: Saltheril's Soiree
+        -- 93909 = Midnight: Delves
+        -- 93910 = Midnight: Prey
+        -- 93911 = Midnight: Dungeons
+        -- 93766 = Midnight: World Quests
     },
     {
         key = "fortify",
@@ -85,11 +93,6 @@ C.WeeklyQuests = {
         key = "stormarion",
         label = "Stormarion",
         questIDs = { 90962 },  -- Stormarion Assault activity quest
-    },
-    {
-        key = "standYourGround",
-        label = "Stand Your Ground",
-        questIDs = { 94581 },  -- Stormarion defense quest
     },
 }
 
@@ -237,6 +240,25 @@ C.PreyDifficulties = {
 }
 
 ---------------------------------------------------------------------------
+-- Abundance (Shard of Dundun)
+---------------------------------------------------------------------------
+C.Abundance = {
+    currencyID = 3376,           -- Shard of Dundun
+    abundanceCurrencyID = 3377,  -- Unalloyed Abundance
+}
+
+---------------------------------------------------------------------------
+-- Dawncrests (upgrade currencies)
+---------------------------------------------------------------------------
+C.Crests = {
+    { key = "adventurer", label = "Adventurer", currencyID = 3383 },
+    { key = "veteran",    label = "Veteran",    currencyID = 3341 },
+    { key = "champion",   label = "Champion",   currencyID = 3343 },
+    { key = "hero",       label = "Hero",       currencyID = 3345 },
+    { key = "myth",       label = "Myth",       currencyID = 3348 },
+}
+
+---------------------------------------------------------------------------
 -- Delves
 ---------------------------------------------------------------------------
 C.Delves = {
@@ -287,18 +309,121 @@ C.VaultTypes = {
 }
 
 ---------------------------------------------------------------------------
+-- Professions — Weekly Knowledge Sources
+-- Keyed by skillLineID. Quest IDs sourced from Myu's Knowledge Points Tracker.
+---------------------------------------------------------------------------
+C.Professions = {
+    [2906] = {
+        name = "Alchemy",
+        abbrev = "Alch",
+        treatiseQuestID = 95127,
+        weeklyQuestIDs = { 93690 },
+        treasureQuestIDs = { 93528, 93529 },
+    },
+    [2907] = {
+        name = "Blacksmithing",
+        abbrev = "B.S.",
+        treatiseQuestID = 95128,
+        weeklyQuestIDs = { 93691 },
+        treasureQuestIDs = { 93530, 93531 },
+    },
+    [2909] = {
+        name = "Enchanting",
+        abbrev = "Ench",
+        treatiseQuestID = 95129,
+        weeklyQuestIDs = { 93699, 93698, 93697 },
+        treasureQuestIDs = { 93532, 93533 },
+    },
+    [2910] = {
+        name = "Engineering",
+        abbrev = "Engr",
+        treatiseQuestID = 95138,
+        weeklyQuestIDs = { 93692 },
+        treasureQuestIDs = { 93534, 93535 },
+    },
+    [2912] = {
+        name = "Herbalism",
+        abbrev = "Herb",
+        treatiseQuestID = 95130,
+        weeklyQuestIDs = { 93700, 93701, 93702, 93703, 93704 },
+        treasureQuestIDs = { 81425, 81426, 81427, 81428, 81429, 81430 },
+    },
+    [2913] = {
+        name = "Inscription",
+        abbrev = "Insc",
+        treatiseQuestID = 95131,
+        weeklyQuestIDs = { 93693 },
+        treasureQuestIDs = { 93536, 93537 },
+    },
+    [2914] = {
+        name = "Jewelcrafting",
+        abbrev = "J.C.",
+        treatiseQuestID = 95133,
+        weeklyQuestIDs = { 93694 },
+        treasureQuestIDs = { 93538, 93539 },
+    },
+    [2915] = {
+        name = "Leatherworking",
+        abbrev = "L.W.",
+        treatiseQuestID = 95134,
+        weeklyQuestIDs = { 93695 },
+        treasureQuestIDs = { 93540, 93541 },
+    },
+    [2916] = {
+        name = "Mining",
+        abbrev = "Mine",
+        treatiseQuestID = 95135,
+        weeklyQuestIDs = { 93705, 93706, 93707, 93708, 93709 },
+        treasureQuestIDs = { 88673, 88674, 88675, 88676, 88677, 88678 },
+    },
+    [2917] = {
+        name = "Skinning",
+        abbrev = "Skin",
+        treatiseQuestID = 95136,
+        weeklyQuestIDs = { 93710, 93711, 93712, 93713, 93714 },
+        treasureQuestIDs = { 88534, 88549, 88536, 88537, 88530, 88529 },
+    },
+    [2918] = {
+        name = "Tailoring",
+        abbrev = "Tail",
+        treatiseQuestID = 95137,
+        weeklyQuestIDs = { 93696 },
+        treasureQuestIDs = { 93542, 93543 },
+    },
+}
+
+-- Base skillLine ID → TWW skillLine ID mapping.
+-- GetProfessionInfo() returns the base ID; we need the expansion-specific ID
+-- to look up quest data in C.Professions.
+C.ProfessionBaseToTWW = {
+    [171] = 2906,  -- Alchemy
+    [164] = 2907,  -- Blacksmithing
+    [333] = 2909,  -- Enchanting
+    [202] = 2910,  -- Engineering
+    [182] = 2912,  -- Herbalism
+    [773] = 2913,  -- Inscription
+    [755] = 2914,  -- Jewelcrafting
+    [165] = 2915,  -- Leatherworking
+    [186] = 2916,  -- Mining
+    [393] = 2917,  -- Skinning
+    [197] = 2918,  -- Tailoring
+}
+
+---------------------------------------------------------------------------
 -- UI Defaults
 ---------------------------------------------------------------------------
 C.UI = {
-    WINDOW_WIDTH       = 900,
-    WINDOW_HEIGHT      = 600,
-    MIN_WINDOW_WIDTH   = 600,
-    MIN_WINDOW_HEIGHT  = 400,
+    WINDOW_WIDTH       = 1035,
+    WINDOW_HEIGHT      = 690,
+    MIN_WINDOW_WIDTH   = 690,
+    MIN_WINDOW_HEIGHT  = 460,
     LABEL_COLUMN_WIDTH = 170,
     CHAR_COLUMN_WIDTH  = 95,
     HEADER_HEIGHT      = 44,
     ROW_HEIGHT         = 20,
     SECTION_HEIGHT     = 22,
-    TITLE_HEIGHT       = 28,
+    TITLE_HEIGHT       = 40,
     SCROLL_STEP        = 40,
+    SCROLLBAR_SIZE     = 10,
+    SCROLLBAR_MIN_THUMB = 20,
 }

@@ -44,7 +44,8 @@ function Weekly.ShowTooltip(anchor, text)
         tooltipText:SetWidth(textWidth)
     end
 
-    tooltip:SetSize(textWidth + 20, textHeight + 20)
+    local minWidth = 160
+    tooltip:SetSize(math.max(textWidth + 20, minWidth), textHeight + 20)
 
     tooltip:ClearAllPoints()
     tooltip:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -4)

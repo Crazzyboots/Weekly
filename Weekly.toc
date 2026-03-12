@@ -15,9 +15,12 @@ Modules\CharacterInfo.lua
 Modules\MythicPlus.lua
 Modules\Raids.lua
 Modules\WeeklyQuests.lua
+Modules\Abundance.lua
 Modules\PinnacleCaches.lua
 Modules\Prey.lua
 Modules\Delves.lua
+Modules\Crests.lua
+Modules\Professions.lua
 
 UI\CellRenderers.lua
 UI\Tooltip.lua
