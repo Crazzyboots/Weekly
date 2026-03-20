@@ -381,6 +381,36 @@ function DB.Migrate()
         end
     end
 
+    if version < 5 then
+        WeeklyDB.schemaVersion = 5
+        if WeeklyDB.settings then
+            -- Reset module order to pick up new Season 2 defaults
+            WeeklyDB.settings.moduleOrder = {}
+            -- Add greatVault data to existing characters
+            if WeeklyDB.characters then
+                for _, charData in pairs(WeeklyDB.characters) do
+                    if not charData.greatVault then
+                        charData.greatVault = { canClaim = false, mythicPlus = {}, raid = {}, world = {} }
+                    end
+                    -- Clean up old vault data from M+ and Raids
+                    if charData.mythicPlus then
+                        charData.mythicPlus.vaultSlots = nil
+                    end
+                    if charData.vault then
+                        charData.vault = nil
+                    end
+                    -- Clean up old delves fields
+                    if charData.delves then
+                        charData.delves.bountifulCompleted = nil
+                        charData.delves.bountifulCount = nil
+                        charData.delves.bountifulMax = nil
+                        charData.delves.vaultSlots = nil
+                    end
+                end
+            end
+        end
+    end
+
     -- Future migrations go here:
-    -- if version < 5 then ... end
+    -- if version < 6 then ... end
 end
