@@ -26,6 +26,7 @@ local DEFAULT_DB = {
         hiddenCharacters = {},
         sortBy = "lastSeen",       -- "lastSeen", "ilvl", "name", "custom"
         customCharOrder = {},      -- ordered list of charKeys for custom sort
+        moduleOrder = {},          -- ordered list of module keys for custom section order
     },
 }
 
@@ -71,9 +72,18 @@ local DEFAULT_CHARACTER = {
     },
 
     delves = {
-        bountifulCompleted = 0,
         cofferKeysAvailable = 0,
         cofferKeyShards = 0,
+        cofferKeyShardsWeekly = 0,
+        cofferKeyShardsWeeklyMax = 600,
+        delversBountyObtained = false,
+    },
+
+    greatVault = {
+        canClaim = false,
+        mythicPlus = {},
+        raid = {},
+        world = {},
     },
 }
 

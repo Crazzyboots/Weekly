@@ -6,7 +6,7 @@ local C = Weekly.Constants
 local mod = {
     key = "specialAssignments",
     label = "Assignments",
-    order = 50,
+    order = 90,
     events = {
         "QUEST_TURNED_IN",
     },

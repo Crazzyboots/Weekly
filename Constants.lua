@@ -262,10 +262,12 @@ C.Crests = {
 -- Delves
 ---------------------------------------------------------------------------
 C.Delves = {
-    bountifulQuestIDs = { 81514 },  -- "Bountiful Delves" weekly
     cofferKeyCurrencyID = 3028,     -- Restored Coffer Key currency
     cofferKeyShardsCurrencyID = 3310, -- Coffer Key Shards currency
+    bountifulTrackerCurrencyID = 3142, -- Hidden: bountiful completions (28/week cap)
     maxCofferKeys = 4,
+    maxWeeklyShards = 600,          -- Weekly cap for Coffer Key Shards
+    delversBountyQuestID = 86371,   -- Weekly flag: Delver's Bounty map looted
 }
 
 ---------------------------------------------------------------------------
@@ -303,9 +305,9 @@ C.RaidDifficulties = {
 -- Great Vault Thresholds
 ---------------------------------------------------------------------------
 C.VaultTypes = {
-    MYTHIC_PLUS = 1,  -- Enum.WeeklyRewardChestThresholdType.MythicPlus (if available)
-    RAID        = 2,
-    WORLD       = 3,
+    MYTHIC_PLUS = 1,  -- Enum.WeeklyRewardChestThresholdType.Activities
+    RAID        = 3,  -- Enum.WeeklyRewardChestThresholdType.Raid
+    WORLD       = 6,  -- Enum.WeeklyRewardChestThresholdType.World (Delves)
 }
 
 ---------------------------------------------------------------------------

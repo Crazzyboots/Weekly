@@ -47,30 +47,7 @@ function mod:Collect(charData)
         end
     end
 
-    -- Vault progress
-    if C_WeeklyRewards and C_WeeklyRewards.GetActivities then
-        local activities = C_WeeklyRewards.GetActivities()
-        mp.vaultSlots = {}
-        if activities then
-            for _, activity in ipairs(activities) do
-                if activity.type == Enum.WeeklyRewardChestThresholdType.MythicPlus
-                    or activity.type == 1 then
-                    mp.vaultSlots[#mp.vaultSlots + 1] = {
-                        threshold = activity.threshold or 0,
-                        progress = activity.progress or 0,
-                        earned = (activity.progress or 0) >= (activity.threshold or 1),
-                        level = activity.level or 0,
-                    }
-                end
-            end
-        end
-    end
-
-    -- Vault claimable
-    if C_WeeklyRewards and C_WeeklyRewards.CanClaimRewards then
-        charData.vault = charData.vault or {}
-        charData.vault.canClaim = C_WeeklyRewards.CanClaimRewards()
-    end
+    -- Vault data now handled by GreatVault module
 end
 
 function mod:GetRows()
@@ -116,35 +93,6 @@ function mod:GetRows()
         end,
     }
 
-    rows[#rows + 1] = {
-        section = self.key,
-        label = "  Vault",
-        order = self.order + 3,
-        getValue = function(charData)
-            local mp = charData.mythicPlus
-            if not mp or not mp.vaultSlots or #mp.vaultSlots == 0 then
-                return U.FormatProgress(0, 3)
-            end
-            local earned = 0
-            for _, slot in ipairs(mp.vaultSlots) do
-                if slot.earned then earned = earned + 1 end
-            end
-            return U.FormatProgress(earned, #mp.vaultSlots)
-        end,
-        getTooltip = function(charData)
-            local mp = charData.mythicPlus
-            if not mp or not mp.vaultSlots then return "Vault progress" end
-            local lines = { "Great Vault - Mythic+" }
-            for i, slot in ipairs(mp.vaultSlots) do
-                local status = slot.earned and
-                    U.ColorText("Earned (+" .. slot.level .. ")", C.Colors.COMPLETE) or
-                    U.FormatProgress(slot.progress, slot.threshold)
-                lines[#lines + 1] = "  Slot " .. i .. ": " .. status
-            end
-            return table.concat(lines, "\n")
-        end,
-    }
-
     return rows
 end
 
@@ -153,10 +101,6 @@ function mod:OnReset(charData)
         charData.mythicPlus.bestKeyLevel = 0
         charData.mythicPlus.bestKeyDungeon = ""
         charData.mythicPlus.dungeonRuns = 0
-        charData.mythicPlus.vaultSlots = {}
-    end
-    if charData.vault then
-        charData.vault.canClaim = false
     end
 end
 

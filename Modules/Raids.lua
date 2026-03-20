@@ -78,25 +78,7 @@ function mod:Collect(charData)
         end
     end
 
-    -- Also collect vault raid data
-    if C_WeeklyRewards and C_WeeklyRewards.GetActivities then
-        local activities = C_WeeklyRewards.GetActivities()
-        charData.vault = charData.vault or {}
-        charData.vault.raids = {}
-        if activities then
-            for _, activity in ipairs(activities) do
-                if activity.type == Enum.WeeklyRewardChestThresholdType.Raid
-                    or activity.type == 2 then
-                    charData.vault.raids[#charData.vault.raids + 1] = {
-                        threshold = activity.threshold or 0,
-                        progress = activity.progress or 0,
-                        earned = (activity.progress or 0) >= (activity.threshold or 1),
-                        level = activity.level or 0,
-                    }
-                end
-            end
-        end
-    end
+    -- Vault data now handled by GreatVault module
 end
 
 function mod:GetRows()
@@ -182,9 +164,6 @@ end
 
 function mod:OnReset(charData)
     charData.raids = {}
-    if charData.vault then
-        charData.vault.raids = {}
-    end
 end
 
 function mod:OnEvent(event, ...)

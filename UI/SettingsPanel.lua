@@ -139,18 +139,58 @@ local function BuildContent(content)
     local settings = DB.GetSettings()
 
     -------------------------------------------------------------------
-    -- Section A — Module Toggles
+    -- Section A — Module Toggles (with reorder arrows)
     -------------------------------------------------------------------
     CreateSectionTitle(content, y, "Module Toggles")
     y = y + 28
 
+    -- Build ordered module list from settings
+    local moduleOrder = settings.moduleOrder
+    if not moduleOrder or #moduleOrder == 0 then
+        Weekly.ApplyModuleOrder()
+        moduleOrder = settings.moduleOrder
+    end
+
+    -- Build lookup from key to module object
+    local modLookup = {}
     for _, mod in ipairs(Weekly.modules) do
-        if mod.key ~= "characterInfo" then
-            local enabled = not DB.IsModuleDisabled(mod.key)
-            local modKey = mod.key
-            CreateCheckbox(content, 20, y, mod.label or mod.key, enabled, function(checked)
-                DB.SetModuleDisabled(modKey, not checked)
+        modLookup[mod.key] = mod
+    end
+
+    for i, modKey in ipairs(moduleOrder) do
+        local mod = modLookup[modKey]
+        if mod and mod.key ~= "characterInfo" then
+            local enabled = not DB.IsModuleDisabled(modKey)
+            local capturedKey = modKey
+
+            -- Checkbox at x=70 to leave room for arrows
+            local cb = CreateCheckbox(content, 70, y, mod.label or mod.key, enabled, function(checked)
+                DB.SetModuleDisabled(capturedKey, not checked)
+                if Weekly.RefreshGrid then Weekly.RefreshGrid() end
             end)
+
+            -- Up arrow
+            if i > 1 then
+                local idx = i
+                CreateArrowButton(content, 20, y + 4, "up", function()
+                    moduleOrder[idx], moduleOrder[idx - 1] = moduleOrder[idx - 1], moduleOrder[idx]
+                    Weekly.ApplyModuleOrder()
+                    SP.Rebuild()
+                    if Weekly.RefreshGrid then Weekly.RefreshGrid() end
+                end)
+            end
+
+            -- Down arrow
+            if i < #moduleOrder then
+                local idx = i
+                CreateArrowButton(content, 44, y + 4, "down", function()
+                    moduleOrder[idx], moduleOrder[idx + 1] = moduleOrder[idx + 1], moduleOrder[idx]
+                    Weekly.ApplyModuleOrder()
+                    SP.Rebuild()
+                    if Weekly.RefreshGrid then Weekly.RefreshGrid() end
+                end)
+            end
+
             y = y + 28
         end
     end
@@ -179,6 +219,7 @@ local function BuildContent(content)
             local capturedKey = charKey
             local cb = CreateCheckbox(content, 20, y, "", visible, function(checked)
                 DB.SetCharacterHidden(capturedKey, not checked)
+                if Weekly.RefreshGrid then Weekly.RefreshGrid() end
             end)
 
             cb.label:SetText(U.ColorText(displayName, classColor))
@@ -310,6 +351,7 @@ local function BuildContent(content)
 
     CreateCheckbox(content, 20, y, "Show offline characters", settings.showOfflineCharacters, function(checked)
         settings.showOfflineCharacters = checked
+        if Weekly.RefreshGrid then Weekly.RefreshGrid() end
     end)
     y = y + 36
 
@@ -353,6 +395,7 @@ local function BuildContent(content)
         value = math.floor(value / 10 + 0.5) * 10
         settings.columnWidth = value
         sliderLabel:SetText("Column width: " .. value)
+        if Weekly.RefreshGrid then Weekly.RefreshGrid() end
     end)
 
     slider:SetValue(settings.columnWidth or C.UI.CHAR_COLUMN_WIDTH)
@@ -426,6 +469,7 @@ function SP.Hide()
     if not panelState.frame:IsShown() then return end
     panelState.frame:Hide()
     G.Show()
+    if Weekly.RefreshGrid then Weekly.RefreshGrid() end
 end
 
 function SP.IsShown()

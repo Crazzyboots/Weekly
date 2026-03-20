@@ -13,6 +13,7 @@ Core.lua
 
 Modules\CharacterInfo.lua
 Modules\MythicPlus.lua
+Modules\GreatVault.lua
 Modules\Raids.lua
 Modules\WeeklyQuests.lua
 Modules\Abundance.lua

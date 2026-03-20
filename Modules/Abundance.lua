@@ -6,7 +6,7 @@ local C = Weekly.Constants
 local mod = {
     key = "abundance",
     label = "Abundance",
-    order = 42,
+    order = 80,
     events = {
         "CURRENCY_DISPLAY_UPDATE",
     },

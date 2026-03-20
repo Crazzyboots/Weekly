@@ -38,6 +38,52 @@ function Weekly.RegisterModule(mod)
 end
 
 ---------------------------------------------------------------------------
+-- Apply custom module order from settings
+---------------------------------------------------------------------------
+function Weekly.ApplyModuleOrder()
+    local settings = DB.GetSettings()
+    if not settings then return end
+
+    -- Initialize moduleOrder if empty
+    if not settings.moduleOrder or #settings.moduleOrder == 0 then
+        settings.moduleOrder = {}
+        for _, mod in ipairs(Weekly.modules) do
+            if mod.key ~= "characterInfo" then
+                settings.moduleOrder[#settings.moduleOrder + 1] = mod.key
+            end
+        end
+    end
+
+    -- Build a lookup: key -> position in custom order
+    local orderLookup = {}
+    for i, key in ipairs(settings.moduleOrder) do
+        orderLookup[key] = i
+    end
+
+    -- Add any new modules not yet in the order list (e.g. newly added modules)
+    for _, mod in ipairs(Weekly.modules) do
+        if mod.key ~= "characterInfo" and not orderLookup[mod.key] then
+            settings.moduleOrder[#settings.moduleOrder + 1] = mod.key
+            orderLookup[mod.key] = #settings.moduleOrder
+        end
+    end
+
+    -- Reassign order values: characterInfo stays at 10, others get 20, 30, 40...
+    for _, mod in ipairs(Weekly.modules) do
+        if mod.key == "characterInfo" then
+            mod.order = 10
+        elseif orderLookup[mod.key] then
+            mod.order = 20 + (orderLookup[mod.key] - 1) * 10
+        end
+    end
+
+    -- Re-sort the modules array
+    table.sort(Weekly.modules, function(a, b)
+        return (a.order or 99) < (b.order or 99)
+    end)
+end
+
+---------------------------------------------------------------------------
 -- Collect data for current character
 ---------------------------------------------------------------------------
 function Weekly.CollectAll()
@@ -116,6 +162,7 @@ local function OnEvent(self, event, ...)
         DB.DetectRegion()
         DB.CheckWeeklyReset()
         DB.ResetAllCharactersIfNeeded()
+        Weekly.ApplyModuleOrder()
 
         Weekly.CollectAll()
 
