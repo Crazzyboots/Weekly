@@ -204,6 +204,45 @@ function mod:GetRows()
         end,
     }
 
+    -- Patron board check row (daily reset)
+    rows[#rows + 1] = {
+        section = self.key,
+        label = "  Patron",
+        order = self.order + 4,
+        getValue = function(charData)
+            local profs = GetTrackedProfs(charData)
+            if not profs then return U.ColorText("\226\128\148", C.Colors.UNAVAILABLE) end
+            local lastCheck = charData.professions and charData.professions.lastPatronCheck or 0
+            local dailyReset = Weekly.Database.ComputeLastDailyResetTimestamp(
+                Weekly.db and Weekly.db.region or 1)
+            if lastCheck > dailyReset then
+                return U.ColorText("\226\156\148", C.Colors.COMPLETE)
+            else
+                return U.ColorText("\226\156\151", C.Colors.NOT_STARTED)
+            end
+        end,
+        getTooltip = function(charData)
+            local lastCheck = charData.professions and charData.professions.lastPatronCheck or 0
+            local lines = { "Patron Orders Board" }
+            if lastCheck > 0 then
+                local elapsed = U.GetServerTime() - lastCheck
+                local hours = math.floor(elapsed / 3600)
+                local mins = math.floor((elapsed % 3600) / 60)
+                if hours > 0 then
+                    lines[#lines + 1] = "Last checked: " .. hours .. "h " .. mins .. "m ago"
+                else
+                    lines[#lines + 1] = "Last checked: " .. mins .. "m ago"
+                end
+            else
+                lines[#lines + 1] = "Not checked yet"
+            end
+            lines[#lines + 1] = ""
+            lines[#lines + 1] = "Open a profession table to mark as checked."
+            lines[#lines + 1] = "Resets daily."
+            return table.concat(lines, "\n")
+        end,
+    }
+
     return rows
 end
 
@@ -228,3 +267,23 @@ function mod:OnEvent(event, ...)
 end
 
 Weekly.RegisterModule(mod)
+
+---------------------------------------------------------------------------
+-- Patron board check — lightweight listener, no full re-collect
+---------------------------------------------------------------------------
+local patronFrame = CreateFrame("Frame")
+patronFrame:RegisterEvent("TRADE_SKILL_SHOW")
+patronFrame:SetScript("OnEvent", function()
+    local charKey = U.GetCharacterKey()
+    if not charKey then return end
+    local DB = Weekly.Database
+    local charData = DB and DB.GetCharacter(charKey)
+    if charData then
+        if not charData.professions then charData.professions = {} end
+        charData.professions.lastPatronCheck = U.GetServerTime()
+        -- Only refresh grid if window is visible (cheap UI update)
+        if Weekly.mainWindow and Weekly.mainWindow:IsShown() and Weekly.RefreshGrid then
+            Weekly.RefreshGrid()
+        end
+    end
+end)

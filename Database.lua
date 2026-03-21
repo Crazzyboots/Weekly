@@ -260,6 +260,28 @@ function DB.ComputeLastResetTimestamp(region)
     return resetTimestamp
 end
 
+function DB.ComputeLastDailyResetTimestamp(region)
+    local schedule = C.ResetSchedule[region or 1]
+    if not schedule then
+        schedule = C.ResetSchedule[1]
+    end
+
+    -- Daily reset uses the same hour as weekly reset
+    local now = U.GetServerTime()
+    local nowDate = date("!*t", now)
+
+    -- Today's daily reset at the scheduled hour
+    local todayMidnightUTC = now - (nowDate.hour * 3600) - (nowDate.min * 60) - nowDate.sec
+    local todayReset = todayMidnightUTC + (schedule.hour * 3600) + (schedule.min * 60)
+
+    -- If we haven't hit today's reset yet, the last reset was yesterday
+    if todayReset > now then
+        todayReset = todayReset - 86400
+    end
+
+    return todayReset
+end
+
 function DB.CheckWeeklyReset()
     if not Weekly.db then return false end
 
