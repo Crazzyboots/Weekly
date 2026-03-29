@@ -130,7 +130,8 @@ function mod:GetRows()
             lines[#lines + 1] = ""
             lines[#lines + 1] = "Complete 3 Nightmare Prey Hunts."
             lines[#lines + 1] = "Rewards 20 uncapped Hero Crests"
-            lines[#lines + 1] = "and a Beacon of Hope (drops in a delve)."
+            lines[#lines + 1] = "and a Beacon of Hope (drop in a +8"
+            lines[#lines + 1] = "delve for a 259 Hero piece of loot)."
             return table.concat(lines, "\n")
         end,
     }
