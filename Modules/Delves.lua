@@ -10,6 +10,8 @@ local mod = {
     events = {
         "QUEST_TURNED_IN",
         "CURRENCY_DISPLAY_UPDATE",
+        "QUEST_LOG_UPDATE",
+        "UPDATE_UI_WIDGET",
     },
 }
 
@@ -67,6 +69,33 @@ function mod:Collect(charData)
             else
                 d.delversBountyState = "used"
             end
+        end
+    end
+
+    -- Gilded Stash (weekly count from UI widget)
+    if C.Delves.gildedStashWidgetID and C_UIWidgetManager and C_UIWidgetManager.GetSpellDisplayVisualizationInfo then
+        local info = C_UIWidgetManager.GetSpellDisplayVisualizationInfo(C.Delves.gildedStashWidgetID)
+        if info and info.spellInfo and info.spellInfo.tooltip then
+            local current, max = info.spellInfo.tooltip:match("(%d+)/(%d+)")
+            if current then
+                d.gildedStashLooted = tonumber(current)
+                d.gildedStashMax = tonumber(max) or C.Delves.gildedStashMax
+            end
+        end
+    end
+
+    -- A Nightmarish Task (weekly quest: 3 Nightmare Hunts)
+    if C.Delves.nightmarishTaskQuestID and C_QuestLog then
+        if C_QuestLog.IsQuestFlaggedCompleted(C.Delves.nightmarishTaskQuestID) then
+            d.nightmarishTask = { completed = true, progress = C.Delves.nightmarishTaskTotal, total = C.Delves.nightmarishTaskTotal }
+        else
+            -- Try to get in-progress objective data
+            local progress = 0
+            local objectives = C_QuestLog.GetQuestObjectives(C.Delves.nightmarishTaskQuestID)
+            if objectives and objectives[1] then
+                progress = objectives[1].numFulfilled or 0
+            end
+            d.nightmarishTask = { completed = false, progress = progress, total = C.Delves.nightmarishTaskTotal }
         end
     end
 end
@@ -179,6 +208,59 @@ function mod:GetRows()
         end,
     }
 
+    -- Row 4: Gilded Stash (weekly, from T11 bountiful delves)
+    rows[#rows + 1] = {
+        section = self.key,
+        label = "  Gilded Stash",
+        order = self.order + 4,
+        getValue = function(charData)
+            local d = charData.delves
+            if not d or not d.gildedStashLooted then return U.FormatProgress(0, C.Delves.gildedStashMax) end
+            local looted = d.gildedStashLooted or 0
+            local max = d.gildedStashMax or C.Delves.gildedStashMax
+            return U.FormatProgress(looted, max)
+        end,
+        getTooltip = function(charData)
+            local d = charData.delves
+            local looted = d and d.gildedStashLooted or 0
+            local max = d and d.gildedStashMax or C.Delves.gildedStashMax
+            local lines = { "Gilded Stash" }
+            lines[#lines + 1] = "Looted: " .. looted .. "/" .. max
+            lines[#lines + 1] = ""
+            lines[#lines + 1] = "Appears in Tier 11 Bountiful Delves."
+            lines[#lines + 1] = "Resets weekly."
+            return table.concat(lines, "\n")
+        end,
+    }
+
+    -- Row 5: A Nightmarish Task (weekly quest, 3 Nightmare Hunts)
+    rows[#rows + 1] = {
+        section = self.key,
+        label = "  Nightmare Task",
+        order = self.order + 5,
+        getValue = function(charData)
+            local d = charData.delves
+            if not d or not d.nightmarishTask then return U.FormatProgress(0, C.Delves.nightmarishTaskTotal) end
+            local nt = d.nightmarishTask
+            return U.FormatProgress(nt.progress, nt.total)
+        end,
+        getTooltip = function(charData)
+            local d = charData.delves
+            local nt = d and d.nightmarishTask
+            local lines = { "A Nightmarish Task" }
+            if nt and nt.completed then
+                lines[#lines + 1] = "|cff00ff00Completed this week|r"
+            elseif nt then
+                lines[#lines + 1] = "Nightmare Hunts: " .. nt.progress .. "/" .. nt.total
+            else
+                lines[#lines + 1] = "Not started"
+            end
+            lines[#lines + 1] = ""
+            lines[#lines + 1] = "Complete 3 Nightmare Hunts."
+            return table.concat(lines, "\n")
+        end,
+    }
+
     return rows
 end
 
@@ -189,6 +271,9 @@ function mod:OnReset(charData)
         cofferKeyShardsWeekly = 0,
         cofferKeyShardsWeeklyMax = C.Delves.maxWeeklyShards,
         delversBountyState = "none",
+        gildedStashLooted = 0,
+        gildedStashMax = C.Delves.gildedStashMax,
+        nightmarishTask = { completed = false, progress = 0, total = C.Delves.nightmarishTaskTotal },
     }
 end
 

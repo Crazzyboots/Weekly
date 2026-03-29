@@ -6,7 +6,7 @@ local C = Weekly.Constants
 ---------------------------------------------------------------------------
 -- Version & Schema
 ---------------------------------------------------------------------------
-C.ADDON_VERSION = "1.2.0"
+C.ADDON_VERSION = "1.2.1"
 C.SCHEMA_VERSION = 6
 
 ---------------------------------------------------------------------------
@@ -270,6 +270,10 @@ C.Delves = {
     delversBountyQuestID = 86371,   -- Weekly flag: Delver's Bounty map looted
     delversBountyItemIDs = { 248142, 254256 },  -- S3 Midnight bounty map + epic variant
     delversBountyBuffID = 473218,   -- Aura: map used, trove not yet opened
+    gildedStashWidgetID = 6659,     -- UI widget tracking gilded stash looted count
+    gildedStashMax = 4,             -- Weekly cap for gilded stash
+    nightmarishTaskQuestID = 94446, -- Weekly quest: A Nightmarish Task (3 Nightmare Hunts)
+    nightmarishTaskTotal = 3,       -- Required Nightmare Hunts
 }
 
 ---------------------------------------------------------------------------

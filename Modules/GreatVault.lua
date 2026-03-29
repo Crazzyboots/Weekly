@@ -124,11 +124,11 @@ function mod:GetRows()
             for _, slot in ipairs(gv.mythicPlus) do
                 if slot.earned then
                     lines[#lines + 1] = "  Slot " .. slot.index .. ": " ..
-                        U.ColorText("+" .. slot.level, C.Colors.COMPLETE) ..
-                        " (" .. slot.progress .. "/" .. slot.threshold .. ")"
+                        U.ColorText("+" .. slot.level .. " \226\156\148", C.Colors.COMPLETE)
                 else
+                    local remaining = slot.threshold - slot.progress
                     lines[#lines + 1] = "  Slot " .. slot.index .. ": " ..
-                        slot.progress .. "/" .. slot.threshold
+                        U.ColorText(remaining .. " more to unlock", C.Colors.IN_PROGRESS)
                 end
             end
             lines[#lines + 1] = ""
@@ -157,11 +157,11 @@ function mod:GetRows()
                 if slot.earned then
                     local diffName = DIFF_NAMES[slot.level] or ("Diff " .. slot.level)
                     lines[#lines + 1] = "  Slot " .. slot.index .. ": " ..
-                        U.ColorText(diffName, C.Colors.COMPLETE) ..
-                        " (" .. slot.progress .. "/" .. slot.threshold .. ")"
+                        U.ColorText(diffName .. " \226\156\148", C.Colors.COMPLETE)
                 else
+                    local remaining = slot.threshold - slot.progress
                     lines[#lines + 1] = "  Slot " .. slot.index .. ": " ..
-                        slot.progress .. "/" .. slot.threshold
+                        U.ColorText(remaining .. " more to unlock", C.Colors.IN_PROGRESS)
                 end
             end
             lines[#lines + 1] = ""
@@ -189,11 +189,11 @@ function mod:GetRows()
             for _, slot in ipairs(gv.world) do
                 if slot.earned then
                     lines[#lines + 1] = "  Slot " .. slot.index .. ": " ..
-                        U.ColorText("Tier " .. slot.level, C.Colors.COMPLETE) ..
-                        " (" .. slot.progress .. "/" .. slot.threshold .. ")"
+                        U.ColorText("Tier " .. slot.level .. " \226\156\148", C.Colors.COMPLETE)
                 else
+                    local remaining = slot.threshold - slot.progress
                     lines[#lines + 1] = "  Slot " .. slot.index .. ": " ..
-                        slot.progress .. "/" .. slot.threshold
+                        U.ColorText(remaining .. " more to unlock", C.Colors.IN_PROGRESS)
                 end
             end
             lines[#lines + 1] = ""
