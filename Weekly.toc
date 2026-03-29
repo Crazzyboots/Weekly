@@ -2,7 +2,7 @@
 ## Title: Weekly
 ## Notes: Account-wide weekly chore tracker for Midnight
 ## Author: Weekly
-## Version: 1.1.0
+## Version: 1.2.0
 ## SavedVariables: WeeklyDB
 ## IconTexture: Interface\AddOns\Weekly\icon-large
 
