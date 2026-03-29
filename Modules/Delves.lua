@@ -86,20 +86,6 @@ function mod:Collect(charData)
         -- If widget returned nil, keep the previously stored value (don't overwrite)
     end
 
-    -- A Nightmarish Task (weekly quest: 3 Nightmare Hunts)
-    if C.Delves.nightmarishTaskQuestID and C_QuestLog then
-        if C_QuestLog.IsQuestFlaggedCompleted(C.Delves.nightmarishTaskQuestID) then
-            d.nightmarishTask = { completed = true, progress = C.Delves.nightmarishTaskTotal, total = C.Delves.nightmarishTaskTotal }
-        else
-            -- Try to get in-progress objective data
-            local progress = 0
-            local objectives = C_QuestLog.GetQuestObjectives(C.Delves.nightmarishTaskQuestID)
-            if objectives and objectives[1] then
-                progress = objectives[1].numFulfilled or 0
-            end
-            d.nightmarishTask = { completed = false, progress = progress, total = C.Delves.nightmarishTaskTotal }
-        end
-    end
 end
 
 function mod:GetRows()
@@ -235,34 +221,6 @@ function mod:GetRows()
         end,
     }
 
-    -- Row 5: A Nightmarish Task (weekly quest, 3 Nightmare Hunts)
-    rows[#rows + 1] = {
-        section = self.key,
-        label = "  Nightmare Task",
-        order = self.order + 5,
-        getValue = function(charData)
-            local d = charData.delves
-            if not d or not d.nightmarishTask then return U.FormatProgress(0, C.Delves.nightmarishTaskTotal) end
-            local nt = d.nightmarishTask
-            return U.FormatProgress(nt.progress, nt.total)
-        end,
-        getTooltip = function(charData)
-            local d = charData.delves
-            local nt = d and d.nightmarishTask
-            local lines = { "A Nightmarish Task" }
-            if nt and nt.completed then
-                lines[#lines + 1] = "|cff00ff00Completed this week|r"
-            elseif nt then
-                lines[#lines + 1] = "Nightmare Hunts: " .. nt.progress .. "/" .. nt.total
-            else
-                lines[#lines + 1] = "Not started"
-            end
-            lines[#lines + 1] = ""
-            lines[#lines + 1] = "Complete 3 Nightmare Hunts."
-            return table.concat(lines, "\n")
-        end,
-    }
-
     return rows
 end
 
@@ -275,7 +233,6 @@ function mod:OnReset(charData)
         delversBountyState = "none",
         gildedStashLooted = 0,
         gildedStashMax = C.Delves.gildedStashMax,
-        nightmarishTask = { completed = false, progress = 0, total = C.Delves.nightmarishTaskTotal },
     }
 end
 

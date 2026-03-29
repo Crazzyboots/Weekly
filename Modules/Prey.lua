@@ -53,6 +53,20 @@ function mod:Collect(charData)
             charData.prey.journeyProgress = info.quantity or 0
         end
     end
+
+    -- A Nightmarish Task (weekly quest: 3 Nightmare Hunts)
+    if C.NightmarishTask and C.NightmarishTask.questID and C_QuestLog then
+        if C_QuestLog.IsQuestFlaggedCompleted(C.NightmarishTask.questID) then
+            charData.prey.nightmarishTask = { completed = true, progress = C.NightmarishTask.total, total = C.NightmarishTask.total }
+        else
+            local progress = 0
+            local objectives = C_QuestLog.GetQuestObjectives(C.NightmarishTask.questID)
+            if objectives and objectives[1] then
+                progress = objectives[1].numFulfilled or 0
+            end
+            charData.prey.nightmarishTask = { completed = false, progress = progress, total = C.NightmarishTask.total }
+        end
+    end
 end
 
 ---------------------------------------------------------------------------
@@ -93,6 +107,34 @@ function mod:GetRows()
         }
     end
 
+    -- A Nightmarish Task row
+    rows[#rows + 1] = {
+        section = self.key,
+        label = "  Nightmare Task",
+        order = self.order + 2,
+        getValue = function(charData)
+            local nt = U.SafeGet(charData, "prey", "nightmarishTask")
+            if not nt then return U.FormatProgress(0, C.NightmarishTask.total) end
+            return U.FormatProgress(nt.progress, nt.total)
+        end,
+        getTooltip = function(charData)
+            local nt = U.SafeGet(charData, "prey", "nightmarishTask")
+            local lines = { "A Nightmarish Task (Weekly)" }
+            if nt and nt.completed then
+                lines[#lines + 1] = "|cff00ff00Completed this week|r"
+            elseif nt and nt.progress > 0 then
+                lines[#lines + 1] = "Nightmare Hunts: " .. nt.progress .. "/" .. nt.total
+            else
+                lines[#lines + 1] = "Not started"
+            end
+            lines[#lines + 1] = ""
+            lines[#lines + 1] = "Complete 3 Nightmare Prey Hunts."
+            lines[#lines + 1] = "Rewards 20 uncapped Hero Crests"
+            lines[#lines + 1] = "and a Beacon of Hope (drops in a delve)."
+            return table.concat(lines, "\n")
+        end,
+    }
+
     return rows
 end
 
@@ -106,6 +148,7 @@ function mod:OnReset(charData)
         hard      = { completed = 0, total = 4 },
         nightmare = { completed = 0, total = 4 },
         journeyProgress = charData.prey and charData.prey.journeyProgress or 0,
+        nightmarishTask = { completed = false, progress = 0, total = C.NightmarishTask.total },
     }
 end
 

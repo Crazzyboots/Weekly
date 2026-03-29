@@ -239,6 +239,11 @@ C.PreyDifficulties = {
     { key = "nightmare", label = "Nightmare", total = 4 },
 }
 
+C.NightmarishTask = {
+    questID = 94446,    -- Weekly quest: A Nightmarish Task
+    total = 3,          -- Required Nightmare Hunts
+}
+
 ---------------------------------------------------------------------------
 -- Abundance (Shard of Dundun)
 ---------------------------------------------------------------------------
@@ -272,8 +277,6 @@ C.Delves = {
     delversBountyBuffID = 473218,   -- Aura: map used, trove not yet opened
     gildedStashWidgetID = 7591,     -- UI widget tracking gilded stash looted count (Midnight)
     gildedStashMax = 4,             -- Weekly cap for gilded stash
-    nightmarishTaskQuestID = 94446, -- Weekly quest: A Nightmarish Task (3 Nightmare Hunts)
-    nightmarishTaskTotal = 3,       -- Required Nightmare Hunts
 }
 
 ---------------------------------------------------------------------------
