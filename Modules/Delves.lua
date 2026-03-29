@@ -72,16 +72,18 @@ function mod:Collect(charData)
         end
     end
 
-    -- Gilded Stash (weekly count from UI widget)
+    -- Gilded Stash (weekly count from UI widget — only available in certain zones)
+    -- We cache the value so it persists when the player leaves the zone.
     if C.Delves.gildedStashWidgetID and C_UIWidgetManager and C_UIWidgetManager.GetSpellDisplayVisualizationInfo then
         local info = C_UIWidgetManager.GetSpellDisplayVisualizationInfo(C.Delves.gildedStashWidgetID)
         if info and info.spellInfo and info.spellInfo.tooltip then
-            local current, max = info.spellInfo.tooltip:match("(%d+)/(%d+)")
+            local current, max = info.spellInfo.tooltip:match("(%d+)%s*/%s*(%d+)")
             if current then
                 d.gildedStashLooted = tonumber(current)
                 d.gildedStashMax = tonumber(max) or C.Delves.gildedStashMax
             end
         end
+        -- If widget returned nil, keep the previously stored value (don't overwrite)
     end
 
     -- A Nightmarish Task (weekly quest: 3 Nightmare Hunts)
