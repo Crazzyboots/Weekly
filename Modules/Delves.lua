@@ -38,9 +38,36 @@ function mod:Collect(charData)
         end
     end
 
-    -- Delver's Bounty map (weekly quest flag)
+    -- Delver's Bounty: three-state detection
+    -- "none"     = no map this week
+    -- "obtained" = map looted but not yet used (item in bags or buff active)
+    -- "used"     = map consumed and hidden trove opened
     if C.Delves.delversBountyQuestID and C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then
-        d.delversBountyObtained = C_QuestLog.IsQuestFlaggedCompleted(C.Delves.delversBountyQuestID)
+        local questDone = C_QuestLog.IsQuestFlaggedCompleted(C.Delves.delversBountyQuestID)
+        if not questDone then
+            d.delversBountyState = "none"
+        else
+            -- Check if map is still in bags
+            local hasMap = false
+            if C.Delves.delversBountyItemIDs and GetItemCount then
+                for _, itemID in ipairs(C.Delves.delversBountyItemIDs) do
+                    if (GetItemCount(itemID) or 0) > 0 then
+                        hasMap = true
+                        break
+                    end
+                end
+            end
+            -- Check if bounty buff is active (map used, trove not yet opened)
+            local hasBuff = false
+            if C.Delves.delversBountyBuffID and C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
+                hasBuff = C_UnitAuras.GetPlayerAuraBySpellID(C.Delves.delversBountyBuffID) ~= nil
+            end
+            if hasMap or hasBuff then
+                d.delversBountyState = "obtained"
+            else
+                d.delversBountyState = "used"
+            end
+        end
     end
 end
 
@@ -88,26 +115,38 @@ function mod:GetRows()
         end,
     }
 
-    -- Row 2: Delver's Bounty (weekly map obtained?)
+    -- Row 2: Delver's Bounty (three states: none / obtained / used)
     rows[#rows + 1] = {
         section = self.key,
         label = "  Bounty",
         order = self.order + 2,
         getValue = function(charData)
             local d = charData.delves
-            if not d then return U.ColorText("\226\128\148", C.Colors.NOT_STARTED) end
-            if d.delversBountyObtained then
-                return U.ColorText("\226\156\148", C.Colors.COMPLETE)
+            if not d then return U.ColorText("\226\156\151", C.Colors.NOT_STARTED) end
+            local state = d.delversBountyState
+            -- Backwards compat: handle old boolean field
+            if state == nil and d.delversBountyObtained ~= nil then
+                state = d.delversBountyObtained and "obtained" or "none"
+            end
+            if state == "used" then
+                return U.ColorText("\226\156\148", C.Colors.COMPLETE)       -- green ✔
+            elseif state == "obtained" then
+                return U.ColorText("\226\156\151", C.Colors.IN_PROGRESS)    -- yellow ✗ (has map, not used)
             else
-                return U.ColorText("\226\156\151", C.Colors.NOT_STARTED)
+                return U.ColorText("\226\156\151", C.Colors.NOT_STARTED)    -- grey ✗
             end
         end,
         getTooltip = function(charData)
             local d = charData.delves
-            local obtained = d and d.delversBountyObtained
+            local state = d and d.delversBountyState
+            if state == nil and d and d.delversBountyObtained ~= nil then
+                state = d.delversBountyObtained and "obtained" or "none"
+            end
             local lines = { "Delver's Bounty" }
-            if obtained then
-                lines[#lines + 1] = "Obtained this week"
+            if state == "used" then
+                lines[#lines + 1] = "|cff00ff00Hidden Trove opened this week|r"
+            elseif state == "obtained" then
+                lines[#lines + 1] = "|cffffff00Map in bags — use in a delve!|r"
             else
                 lines[#lines + 1] = "Not yet obtained this week"
             end
@@ -149,7 +188,7 @@ function mod:OnReset(charData)
         cofferKeyShards = charData.delves and charData.delves.cofferKeyShards or 0,
         cofferKeyShardsWeekly = 0,
         cofferKeyShardsWeeklyMax = C.Delves.maxWeeklyShards,
-        delversBountyObtained = false,
+        delversBountyState = "none",
     }
 end
 
