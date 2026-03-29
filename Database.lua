@@ -45,7 +45,8 @@ local DEFAULT_CHARACTER = {
         bestKeyLevel = 0,
         bestKeyDungeon = "",
         dungeonRuns = 0,
-        vaultSlots = {},
+        currentKeystone = { level = 0, dungeonName = "" },
+        dungeons = {},
     },
 
     raids = {},
@@ -433,6 +434,25 @@ function DB.Migrate()
         end
     end
 
+    if version < 6 then
+        WeeklyDB.schemaVersion = 6
+        -- Add currentKeystone and dungeons to existing characters' mythicPlus data
+        if WeeklyDB.characters then
+            for _, charData in pairs(WeeklyDB.characters) do
+                if charData.mythicPlus then
+                    if not charData.mythicPlus.currentKeystone then
+                        charData.mythicPlus.currentKeystone = { level = 0, dungeonName = "" }
+                    end
+                    if not charData.mythicPlus.dungeons then
+                        charData.mythicPlus.dungeons = {}
+                    end
+                    -- Clean up deprecated vaultSlots if it somehow survived
+                    charData.mythicPlus.vaultSlots = nil
+                end
+            end
+        end
+    end
+
     -- Future migrations go here:
-    -- if version < 6 then ... end
+    -- if version < 7 then ... end
 end

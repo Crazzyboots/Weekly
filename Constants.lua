@@ -7,7 +7,7 @@ local C = Weekly.Constants
 -- Version & Schema
 ---------------------------------------------------------------------------
 C.ADDON_VERSION = "1.1.0"
-C.SCHEMA_VERSION = 5
+C.SCHEMA_VERSION = 6
 
 ---------------------------------------------------------------------------
 -- Colors
@@ -268,6 +268,8 @@ C.Delves = {
     maxCofferKeys = 4,
     maxWeeklyShards = 600,          -- Weekly cap for Coffer Key Shards
     delversBountyQuestID = 86371,   -- Weekly flag: Delver's Bounty map looted
+    delversBountyItemIDs = { 248142, 254256 },  -- S3 Midnight bounty map + epic variant
+    delversBountyBuffID = 473218,   -- Aura: map used, trove not yet opened
 }
 
 ---------------------------------------------------------------------------
@@ -409,6 +411,21 @@ C.ProfessionBaseToTWW = {
     [186] = 2916,  -- Mining
     [393] = 2917,  -- Skinning
     [197] = 2918,  -- Tailoring
+}
+
+---------------------------------------------------------------------------
+-- Mythic+ Dungeon Abbreviations (for keystone display in narrow columns)
+-- Matched by substring against dungeon names returned by the API.
+---------------------------------------------------------------------------
+C.MythicPlusDungeonAbbrevs = {
+    ["Windrunner"]   = "WRS",
+    ["Triumvirate"]  = "SEAT",
+    ["Saron"]        = "POS",
+    ["Skyreach"]     = "SKY",
+    ["Xenas"]        = "NPX",
+    ["Maisara"]      = "MAIS",
+    ["Magisters"]    = "MGT",
+    ["Algeth"]       = "AA",
 }
 
 ---------------------------------------------------------------------------
