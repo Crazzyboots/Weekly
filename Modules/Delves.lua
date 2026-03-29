@@ -10,8 +10,6 @@ local mod = {
     events = {
         "QUEST_TURNED_IN",
         "CURRENCY_DISPLAY_UPDATE",
-        "QUEST_LOG_UPDATE",
-        "UPDATE_UI_WIDGET",
     },
 }
 
