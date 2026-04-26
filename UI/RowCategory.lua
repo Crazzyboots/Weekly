@@ -68,5 +68,6 @@ end
 ---------------------------------------------------------------------------
 function RC.IsRowVisible(row)
     if row.isHeader then return true end
-    return not DB.IsSectionCollapsed(row.section)
+    if DB.IsSectionCollapsed(row.section) then return false end
+    return not DB.IsRowHidden(DB.GetRowKey(row))
 end

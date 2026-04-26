@@ -135,23 +135,193 @@ end
 local function BuildContent(content)
     RecycleAll(content)
 
-    local y = 12
     local settings = DB.GetSettings()
+    local pad = 10          -- outer padding
+    local gap = 10          -- gap between cards
+    local cardPad = 10      -- padding inside each card
+    local totalWidth = content:GetWidth() - (pad * 2)
+    local colWidth = math.floor((totalWidth - gap) / 2)
+    local leftX = pad
+    local rightX = pad + colWidth + gap
+
+    -- Card factory: bordered panel inside the content frame
+    local function CreateCard(x, y, width)
+        local card = CreateFrame("Frame", nil, content, "BackdropTemplate")
+        card:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
+        card:SetWidth(width)
+        card:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8x8",
+            edgeFile = "Interface\\Buttons\\WHITE8x8",
+            edgeSize = 1,
+        })
+        card:SetBackdropColor(0.06, 0.06, 0.1, 0.9)
+        card:SetBackdropBorderColor(0.4, 0.12, 0.12, 0.8)
+        return card
+    end
+
+    local function CardTitle(card, cy, text)
+        local fs = card:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        fs:SetPoint("TOPLEFT", card, "TOPLEFT", cardPad, -cy)
+        fs:SetText(text)
+        fs:SetTextColor(1, 0.84, 0)
+        return cy + 24
+    end
+
+    local y = pad
 
     -------------------------------------------------------------------
-    -- Section A — Module Toggles (with reorder arrows)
+    -- ROW 1:  Sort By (left)  |  Display (right)
     -------------------------------------------------------------------
-    CreateSectionTitle(content, y, "Module Toggles")
-    y = y + 28
 
-    -- Build ordered module list from settings
+    -- ── Sort By ──
+    local sortCard = CreateCard(leftX, y, colWidth)
+    local sy = cardPad
+    sy = CardTitle(sortCard, sy, "Sort Characters By")
+
+    local sortOptions = {
+        { key = "lastSeen", label = "Last Seen" },
+        { key = "ilvl",     label = "Item Level" },
+        { key = "name",     label = "Name (A-Z)" },
+        { key = "custom",   label = "Custom Order" },
+    }
+    local currentSort = settings.sortBy or "lastSeen"
+
+    for _, opt in ipairs(sortOptions) do
+        local optKey = opt.key
+        CreateRadioButton(sortCard, 8, sy, opt.label, currentSort == optKey, function()
+            settings.sortBy = optKey
+            SP.Rebuild()
+            if Weekly.RefreshGrid then Weekly.RefreshGrid() end
+        end)
+        sy = sy + 22
+    end
+
+    if currentSort == "custom" then
+        sy = sy + 4
+        if not settings.customCharOrder or #settings.customCharOrder == 0 then
+            settings.sortBy = "lastSeen"
+            settings.customCharOrder = DB.GetSortedCharacterKeys()
+            settings.sortBy = "custom"
+        end
+        local order = settings.customCharOrder
+        for i, charKey in ipairs(order) do
+            local charData = DB.GetCharacter(charKey)
+            if charData then
+                local classColor = C.ClassColors[charData.class] or C.Colors.WHITE
+                local displayName = charData.name or "Unknown"
+                if charData.realm and charData.realm ~= "" then
+                    displayName = displayName .. "-" .. charData.realm
+                end
+                local nameFs = sortCard:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                nameFs:SetPoint("TOPLEFT", sortCard, "TOPLEFT", 58, -sy)
+                nameFs:SetText(U.ColorText(displayName, classColor))
+
+                if i > 1 then
+                    local idx = i
+                    CreateArrowButton(sortCard, 10, sy, "up", function()
+                        order[idx], order[idx - 1] = order[idx - 1], order[idx]
+                        SP.Rebuild()
+                        if Weekly.RefreshGrid then Weekly.RefreshGrid() end
+                    end)
+                end
+                if i < #order then
+                    local idx = i
+                    CreateArrowButton(sortCard, 32, sy, "down", function()
+                        order[idx], order[idx + 1] = order[idx + 1], order[idx]
+                        SP.Rebuild()
+                        if Weekly.RefreshGrid then Weekly.RefreshGrid() end
+                    end)
+                end
+                sy = sy + 22
+            end
+        end
+    end
+
+    sy = sy + cardPad
+    sortCard:SetHeight(sy)
+
+    -- ── Display ──
+    local dispCard = CreateCard(rightX, y, colWidth)
+    local dy = cardPad
+    dy = CardTitle(dispCard, dy, "Display")
+
+    CreateCheckbox(dispCard, 8, dy, "Show minimap button", settings.minimapButton.show, function(checked)
+        settings.minimapButton.show = checked
+        if Weekly.minimapButton then
+            if checked then Weekly.minimapButton:Show() else Weekly.minimapButton:Hide() end
+        end
+    end)
+    dy = dy + 26
+
+    CreateCheckbox(dispCard, 8, dy, "Show offline characters", settings.showOfflineCharacters, function(checked)
+        settings.showOfflineCharacters = checked
+        if Weekly.RefreshGrid then Weekly.RefreshGrid() end
+    end)
+    dy = dy + 32
+
+    local sliderLabel = dispCard:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    sliderLabel:SetPoint("TOPLEFT", dispCard, "TOPLEFT", 12, -dy)
+    sliderLabel:SetText("Column width: " .. (settings.columnWidth or C.UI.CHAR_COLUMN_WIDTH))
+    dy = dy + 16
+
+    local sliderWidth = math.min(colWidth - 24, 200)
+    local slider = CreateFrame("Slider", nil, dispCard, "BackdropTemplate")
+    slider:SetPoint("TOPLEFT", dispCard, "TOPLEFT", 12, -dy)
+    slider:SetSize(sliderWidth, 16)
+    slider:SetOrientation("HORIZONTAL")
+    slider:SetMinMaxValues(80, 200)
+    slider:SetValueStep(10)
+    slider:SetObeyStepOnDrag(true)
+    slider:EnableMouse(true)
+    slider:SetBackdrop({
+        bgFile = "Interface\\Buttons\\UI-SliderBar-Background",
+        edgeFile = "Interface\\Buttons\\UI-SliderBar-Border",
+        tile = true, tileSize = 8, edgeSize = 8,
+        insets = { left = 3, right = 3, top = 6, bottom = 6 },
+    })
+    local thumb = slider:CreateTexture(nil, "ARTWORK")
+    thumb:SetSize(16, 24)
+    thumb:SetTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+    slider:SetThumbTexture(thumb)
+
+    local minText = slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    minText:SetPoint("TOPLEFT", slider, "BOTTOMLEFT", 0, -2)
+    minText:SetText("80")
+    local maxText = slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    maxText:SetPoint("TOPRIGHT", slider, "BOTTOMRIGHT", 0, -2)
+    maxText:SetText("200")
+
+    slider:SetScript("OnValueChanged", function(self, value)
+        value = math.floor(value / 10 + 0.5) * 10
+        settings.columnWidth = value
+        sliderLabel:SetText("Column width: " .. value)
+        if Weekly.RefreshGrid then Weekly.RefreshGrid() end
+    end)
+    slider:SetValue(settings.columnWidth or C.UI.CHAR_COLUMN_WIDTH)
+    dy = dy + 36 + cardPad
+
+    dispCard:SetHeight(dy)
+
+    -- Track left and right columns independently from here
+    local leftY = y + math.max(sy, dy) + gap
+    local rightY = leftY
+
+    -------------------------------------------------------------------
+    -- LEFT COL: Module Toggles → Characters
+    -- RIGHT COL: Row Visibility
+    -------------------------------------------------------------------
+
+    -- ── Module Toggles ──
+    local modCard = CreateCard(leftX, leftY, colWidth)
+    local my = cardPad
+    my = CardTitle(modCard, my, "Module Toggles")
+
     local moduleOrder = settings.moduleOrder
     if not moduleOrder or #moduleOrder == 0 then
         Weekly.ApplyModuleOrder()
         moduleOrder = settings.moduleOrder
     end
 
-    -- Build lookup from key to module object
     local modLookup = {}
     for _, mod in ipairs(Weekly.modules) do
         modLookup[mod.key] = mod
@@ -163,27 +333,23 @@ local function BuildContent(content)
             local enabled = not DB.IsModuleDisabled(modKey)
             local capturedKey = modKey
 
-            -- Checkbox at x=70 to leave room for arrows
-            local cb = CreateCheckbox(content, 70, y, mod.label or mod.key, enabled, function(checked)
+            CreateCheckbox(modCard, 58, my, mod.label or mod.key, enabled, function(checked)
                 DB.SetModuleDisabled(capturedKey, not checked)
                 if Weekly.RefreshGrid then Weekly.RefreshGrid() end
             end)
 
-            -- Up arrow
             if i > 1 then
                 local idx = i
-                CreateArrowButton(content, 20, y + 4, "up", function()
+                CreateArrowButton(modCard, 8, my + 4, "up", function()
                     moduleOrder[idx], moduleOrder[idx - 1] = moduleOrder[idx - 1], moduleOrder[idx]
                     Weekly.ApplyModuleOrder()
                     SP.Rebuild()
                     if Weekly.RefreshGrid then Weekly.RefreshGrid() end
                 end)
             end
-
-            -- Down arrow
             if i < #moduleOrder then
                 local idx = i
-                CreateArrowButton(content, 44, y + 4, "down", function()
+                CreateArrowButton(modCard, 32, my + 4, "down", function()
                     moduleOrder[idx], moduleOrder[idx + 1] = moduleOrder[idx + 1], moduleOrder[idx]
                     Weekly.ApplyModuleOrder()
                     SP.Rebuild()
@@ -191,19 +357,50 @@ local function BuildContent(content)
                 end)
             end
 
-            y = y + 28
+            my = my + 26
         end
     end
 
-    y = y + 8
-    CreateSeparator(content, y)
-    y = y + 16
+    my = my + cardPad
+    modCard:SetHeight(my)
+    leftY = leftY + my + gap
+
+    -- ── Row Visibility ──
+    local rvCard = CreateCard(rightX, rightY, colWidth)
+    local ry = cardPad
+    ry = CardTitle(rvCard, ry, "Row Visibility")
+
+    local allRows = Weekly.GetAllRows()
+
+    for _, row in ipairs(allRows) do
+        if row.isHeader then
+            local sectionFs = rvCard:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            sectionFs:SetPoint("TOPLEFT", rvCard, "TOPLEFT", cardPad, -ry)
+            sectionFs:SetText("|cffd94040" .. row.label .. "|r")
+            ry = ry + 20
+        else
+            local rowKey = DB.GetRowKey(row)
+            local visible = not DB.IsRowHidden(rowKey)
+            local capturedKey = rowKey
+            local trimmedLabel = row.label:gsub("^%s+", "")
+            CreateCheckbox(rvCard, 24, ry, trimmedLabel, visible, function(checked)
+                DB.SetRowHidden(capturedKey, not checked)
+                if Weekly.RefreshGrid then Weekly.RefreshGrid() end
+            end)
+            ry = ry + 22
+        end
+    end
+
+    ry = ry + cardPad
+    rvCard:SetHeight(ry)
+    rightY = rightY + ry + gap
 
     -------------------------------------------------------------------
-    -- Section B — Characters
+    -- Characters (left column, below Module Toggles)
     -------------------------------------------------------------------
-    CreateSectionTitle(content, y, "Characters")
-    y = y + 28
+    local charCard = CreateCard(leftX, leftY, colWidth)
+    local cy = cardPad
+    cy = CardTitle(charCard, cy, "Characters")
 
     local charKeys = DB.GetSortedCharacterKeys()
     for _, charKey in ipairs(charKeys) do
@@ -217,190 +414,38 @@ local function BuildContent(content)
 
             local visible = not DB.IsCharacterHidden(charKey)
             local capturedKey = charKey
-            local cb = CreateCheckbox(content, 20, y, "", visible, function(checked)
+            local cb = CreateCheckbox(charCard, 8, cy, "", visible, function(checked)
                 DB.SetCharacterHidden(capturedKey, not checked)
                 if Weekly.RefreshGrid then Weekly.RefreshGrid() end
             end)
-
             cb.label:SetText(U.ColorText(displayName, classColor))
 
-            local delBtn = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
+            local delBtn = CreateFrame("Button", nil, charCard, "UIPanelButtonTemplate")
             delBtn:SetSize(60, 22)
-            delBtn:SetPoint("TOPLEFT", content, "TOPLEFT", 280, -y - 2)
+            delBtn:SetPoint("TOPLEFT", charCard, "TOPLEFT", 260, -cy - 2)
             delBtn:SetText("Delete")
             local capturedName = displayName
             delBtn:SetScript("OnClick", function()
                 local popup = StaticPopup_Show("WEEKLY_DELETE_CHARACTER", capturedName)
-                if popup then
-                    popup.data = capturedKey
-                end
+                if popup then popup.data = capturedKey end
             end)
 
-            y = y + 30
+            cy = cy + 28
         end
     end
 
     if #charKeys == 0 then
-        local noChars = content:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-        noChars:SetPoint("TOPLEFT", content, "TOPLEFT", 24, -y)
+        local noChars = charCard:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+        noChars:SetPoint("TOPLEFT", charCard, "TOPLEFT", 12, -cy)
         noChars:SetText("No characters yet. Log in on your characters!")
-        managedRegions[#managedRegions + 1] = noChars
-        y = y + 24
+        cy = cy + 24
     end
 
-    y = y + 8
-    CreateSeparator(content, y)
-    y = y + 16
+    cy = cy + cardPad
+    charCard:SetHeight(cy)
+    leftY = leftY + cy + gap
 
-    -------------------------------------------------------------------
-    -- Section C — Sort Characters By
-    -------------------------------------------------------------------
-    CreateSectionTitle(content, y, "Sort Characters By")
-    y = y + 28
-
-    local sortOptions = {
-        { key = "lastSeen", label = "Last Seen" },
-        { key = "ilvl",     label = "Item Level" },
-        { key = "name",     label = "Name (A-Z)" },
-        { key = "custom",   label = "Custom Order" },
-    }
-
-    local currentSort = settings.sortBy or "lastSeen"
-
-    for _, opt in ipairs(sortOptions) do
-        local optKey = opt.key
-        CreateRadioButton(content, 20, y, opt.label, currentSort == optKey, function()
-            settings.sortBy = optKey
-            SP.Rebuild()
-            if Weekly.RefreshGrid then
-                Weekly.RefreshGrid()
-            end
-        end)
-        y = y + 24
-    end
-
-    -- If custom sort is active, show Up/Down arrows next to character names
-    if currentSort == "custom" then
-        y = y + 4
-        if not settings.customCharOrder or #settings.customCharOrder == 0 then
-            settings.sortBy = "lastSeen"
-            settings.customCharOrder = DB.GetSortedCharacterKeys()
-            settings.sortBy = "custom"
-        end
-
-        local order = settings.customCharOrder
-        for i, charKey in ipairs(order) do
-            local charData = DB.GetCharacter(charKey)
-            if charData then
-                local classColor = C.ClassColors[charData.class] or C.Colors.WHITE
-                local displayName = charData.name or "Unknown"
-                if charData.realm and charData.realm ~= "" then
-                    displayName = displayName .. "-" .. charData.realm
-                end
-
-                local nameFs = content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-                nameFs:SetPoint("TOPLEFT", content, "TOPLEFT", 70, -y)
-                nameFs:SetText(U.ColorText(displayName, classColor))
-                managedRegions[#managedRegions + 1] = nameFs
-
-                if i > 1 then
-                    local idx = i
-                    CreateArrowButton(content, 24, y, "up", function()
-                        order[idx], order[idx - 1] = order[idx - 1], order[idx]
-                        SP.Rebuild()
-                        if Weekly.RefreshGrid then Weekly.RefreshGrid() end
-                    end)
-                end
-
-                if i < #order then
-                    local idx = i
-                    CreateArrowButton(content, 46, y, "down", function()
-                        order[idx], order[idx + 1] = order[idx + 1], order[idx]
-                        SP.Rebuild()
-                        if Weekly.RefreshGrid then Weekly.RefreshGrid() end
-                    end)
-                end
-
-                y = y + 24
-            end
-        end
-    end
-
-    y = y + 8
-    CreateSeparator(content, y)
-    y = y + 16
-
-    -------------------------------------------------------------------
-    -- Section D — Display Options
-    -------------------------------------------------------------------
-    CreateSectionTitle(content, y, "Display")
-    y = y + 28
-
-    local mmShow = settings.minimapButton.show
-    CreateCheckbox(content, 20, y, "Show minimap button", mmShow, function(checked)
-        settings.minimapButton.show = checked
-        if Weekly.minimapButton then
-            if checked then
-                Weekly.minimapButton:Show()
-            else
-                Weekly.minimapButton:Hide()
-            end
-        end
-    end)
-    y = y + 28
-
-    CreateCheckbox(content, 20, y, "Show offline characters", settings.showOfflineCharacters, function(checked)
-        settings.showOfflineCharacters = checked
-        if Weekly.RefreshGrid then Weekly.RefreshGrid() end
-    end)
-    y = y + 36
-
-    local sliderLabel = content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    sliderLabel:SetPoint("TOPLEFT", content, "TOPLEFT", 24, -y)
-    sliderLabel:SetText("Column width: " .. (settings.columnWidth or C.UI.CHAR_COLUMN_WIDTH))
-    managedRegions[#managedRegions + 1] = sliderLabel
-
-    y = y + 18
-
-    local slider = CreateFrame("Slider", nil, content, "BackdropTemplate")
-    slider:SetPoint("TOPLEFT", content, "TOPLEFT", 24, -y)
-    slider:SetSize(200, 16)
-    slider:SetOrientation("HORIZONTAL")
-    slider:SetMinMaxValues(80, 200)
-    slider:SetValueStep(10)
-    slider:SetObeyStepOnDrag(true)
-    slider:EnableMouse(true)
-
-    slider:SetBackdrop({
-        bgFile = "Interface\\Buttons\\UI-SliderBar-Background",
-        edgeFile = "Interface\\Buttons\\UI-SliderBar-Border",
-        tile = true, tileSize = 8, edgeSize = 8,
-        insets = { left = 3, right = 3, top = 6, bottom = 6 },
-    })
-
-    local thumb = slider:CreateTexture(nil, "ARTWORK")
-    thumb:SetSize(16, 24)
-    thumb:SetTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
-    slider:SetThumbTexture(thumb)
-
-    local minText = slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    minText:SetPoint("TOPLEFT", slider, "BOTTOMLEFT", 0, -2)
-    minText:SetText("80")
-
-    local maxText = slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    maxText:SetPoint("TOPRIGHT", slider, "BOTTOMRIGHT", 0, -2)
-    maxText:SetText("200")
-
-    slider:SetScript("OnValueChanged", function(self, value)
-        value = math.floor(value / 10 + 0.5) * 10
-        settings.columnWidth = value
-        sliderLabel:SetText("Column width: " .. value)
-        if Weekly.RefreshGrid then Weekly.RefreshGrid() end
-    end)
-
-    slider:SetValue(settings.columnWidth or C.UI.CHAR_COLUMN_WIDTH)
-
-    y = y + 40
+    y = math.max(leftY, rightY) + pad
 
     -- Set total content height for scrolling
     content:SetHeight(y + 20)

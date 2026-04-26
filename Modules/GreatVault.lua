@@ -9,8 +9,30 @@ local mod = {
     order = 100,
     events = {
         "WEEKLY_REWARDS_UPDATE",
+        "CURRENCY_DISPLAY_UPDATE",
+        "QUEST_TURNED_IN",
     },
 }
+
+-- Voidcore weekly completion: any of the three Decimus exchange quests
+-- counts (they all reward the same 2 cores under one shared weekly cap),
+-- and currency-cap detection (totalEarned >= maxQuantity) covers the case
+-- where the quest flag isn't yet visible.
+local function ComputeVoidcoreCompleted(info)
+    if info and info.totalEarned and info.maxQuantity and info.maxQuantity > 0 then
+        if info.totalEarned >= info.maxQuantity then
+            return true
+        end
+    end
+    if C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then
+        for _, qid in ipairs(C.Voidcore and C.Voidcore.questIDs or {}) do
+            if qid > 0 and C_QuestLog.IsQuestFlaggedCompleted(qid) then
+                return true
+            end
+        end
+    end
+    return false
+end
 
 -- Difficulty names for raid vault display
 local DIFF_NAMES = {
@@ -67,6 +89,23 @@ function mod:Collect(charData)
 
     if C_WeeklyRewards.CanClaimRewards then
         gv.canClaim = C_WeeklyRewards.CanClaimRewards()
+    end
+    if C_WeeklyRewards.HasAvailableRewards then
+        gv.hasAvailableRewards = C_WeeklyRewards.HasAvailableRewards()
+    end
+
+    -- Nebulous Voidcore (rendered in this section, stored separately)
+    if not charData.voidcore then
+        charData.voidcore = { quantity = 0, totalEarned = 0, maxQuantity = 0, weeklyCompleted = false }
+    end
+    if C.Voidcore and C_CurrencyInfo and C_CurrencyInfo.GetCurrencyInfo then
+        local info = C_CurrencyInfo.GetCurrencyInfo(C.Voidcore.currencyID)
+        if info then
+            charData.voidcore.quantity        = info.quantity or 0
+            charData.voidcore.totalEarned     = info.totalEarned or 0
+            charData.voidcore.maxQuantity     = info.maxQuantity or 0
+            charData.voidcore.weeklyCompleted = ComputeVoidcoreCompleted(info)
+        end
     end
 end
 
@@ -208,10 +247,16 @@ end
 function mod:OnReset(charData)
     charData.greatVault = {
         canClaim = false,
+        hasAvailableRewards = false,
         mythicPlus = {},
         raid = {},
         world = {},
     }
+    -- Voidcore: currency persists across resets; weeklyCompleted recomputes
+    -- on next Collect from totalEarned vs the bumped maxQuantity.
+    if charData.voidcore then
+        charData.voidcore.weeklyCompleted = false
+    end
 end
 
 function mod:OnEvent(event, ...)

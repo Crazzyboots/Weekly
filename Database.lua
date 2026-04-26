@@ -27,6 +27,7 @@ local DEFAULT_DB = {
         sortBy = "lastSeen",       -- "lastSeen", "ilvl", "name", "custom"
         customCharOrder = {},      -- ordered list of charKeys for custom sort
         moduleOrder = {},          -- ordered list of module keys for custom section order
+        hiddenRows = {},           -- per-row visibility: { ["section.Label"] = true }
     },
 }
 
@@ -85,6 +86,13 @@ local DEFAULT_CHARACTER = {
         mythicPlus = {},
         raid = {},
         world = {},
+    },
+
+    voidcore = {
+        quantity = 0,           -- current held
+        totalEarned = 0,        -- season cumulative
+        maxQuantity = 0,        -- season cap (grows by 2 per week)
+        weeklyCompleted = false,
     },
 }
 
@@ -222,6 +230,21 @@ end
 function DB.SetCharacterHidden(charKey, hidden)
     local s = DB.GetSettings()
     s.hiddenCharacters[charKey] = hidden or nil
+end
+
+function DB.GetRowKey(row)
+    return row.rowKey or (row.section .. "." .. row.label:gsub("^%s+", ""))
+end
+
+function DB.IsRowHidden(rowKey)
+    local s = DB.GetSettings()
+    return s.hiddenRows and s.hiddenRows[rowKey] or false
+end
+
+function DB.SetRowHidden(rowKey, hidden)
+    local s = DB.GetSettings()
+    if not s.hiddenRows then s.hiddenRows = {} end
+    s.hiddenRows[rowKey] = hidden or nil
 end
 
 ---------------------------------------------------------------------------
@@ -453,6 +476,22 @@ function DB.Migrate()
         end
     end
 
+    if version < 7 then
+        WeeklyDB.schemaVersion = 7
+        if WeeklyDB.characters then
+            for _, charData in pairs(WeeklyDB.characters) do
+                if not charData.voidcore then
+                    charData.voidcore = {
+                        quantity = 0,
+                        totalEarned = 0,
+                        maxQuantity = 0,
+                        weeklyCompleted = false,
+                    }
+                end
+            end
+        end
+    end
+
     -- Future migrations go here:
-    -- if version < 7 then ... end
+    -- if version < 8 then ... end
 end

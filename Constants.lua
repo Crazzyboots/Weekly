@@ -6,8 +6,8 @@ local C = Weekly.Constants
 ---------------------------------------------------------------------------
 -- Version & Schema
 ---------------------------------------------------------------------------
-C.ADDON_VERSION = "1.2.1"
-C.SCHEMA_VERSION = 6
+C.ADDON_VERSION = "1.3.1"
+C.SCHEMA_VERSION = 7
 
 ---------------------------------------------------------------------------
 -- Colors
@@ -253,6 +253,24 @@ C.Abundance = {
 }
 
 ---------------------------------------------------------------------------
+-- Nebulous Voidcore (Voidforge bonus rolls — patch 12.0.5)
+-- Vendor Decimus offers three weekly quests (Gold / Voidlight Marl /
+-- Veteran Dawncrest), all granting the same 2 Voidcores. Only one may be
+-- completed per reset cycle. Season cap grows by 2 each week.
+-- Primary completion signal is currency cap (totalEarned >= maxQuantity)
+-- since it's identical across all three quest paths. questIDs are a
+-- defensive secondary check; only the Gold ID is currently known.
+---------------------------------------------------------------------------
+C.Voidcore = {
+    currencyID  = 3418,                 -- Nebulous Voidcore
+    weeklyAmount = 2,                   -- cores granted per weekly turn-in
+    questIDs    = { 95279, 95290, 95304 },
+                                        -- 95279 = Nebulous Voidcores: Gold
+                                        -- 95290 = Nebulous Voidcores: Voidlight Marl
+                                        -- 95304 = Nebulous Voidcores: Veteran Dawncrest
+}
+
+---------------------------------------------------------------------------
 -- Dawncrests (upgrade currencies)
 ---------------------------------------------------------------------------
 C.Crests = {
@@ -260,7 +278,34 @@ C.Crests = {
     { key = "veteran",    label = "Veteran",    currencyID = 3341 },
     { key = "champion",   label = "Champion",   currencyID = 3343 },
     { key = "hero",       label = "Hero",       currencyID = 3345 },
-    { key = "myth",       label = "Myth",       currencyID = 3348 },
+    { key = "myth",       label = "Myth",       currencyID = 3347 },
+}
+
+-- One-time bonus crest sources (uncapped, do not count toward weekly cap)
+-- trackBy: "quest" uses C_QuestLog.IsQuestFlaggedCompleted(id)
+--          "achieve" uses select(13, GetAchievementInfo(id)) — wasEarnedByMe
+C.CrestBonuses = {
+    {
+        key = "crackedKeystone",
+        label = "Cracked Key",
+        trackBy = "quest",
+        id = 92600,
+        tooltip = "Cracked Keystone\nComplete any M+2 after getting item from T11 Delve\nReward: 20 Hero + 20 Myth Dawncrests\nOne-time per character",
+    },
+    {
+        key = "nemesisTier8",
+        label = "Nullaeus ?",
+        trackBy = "achieve",
+        id = 61797,
+        tooltip = "My Shady Nemesis\nDefeat Nullaeus at Torment's Rise (Tier 8+)\nReward: 30 Hero Dawncrests\nOne-time per character",
+    },
+    {
+        key = "nemesisTier11",
+        label = "Nullaeus ??",
+        trackBy = "achieve",
+        id = 61798,
+        tooltip = "Lighting the Dark\nDefeat Nullaeus at Torment's Rise (Tier 11)\nReward: 30 Myth Dawncrests\nOne-time per character",
+    },
 }
 
 ---------------------------------------------------------------------------
